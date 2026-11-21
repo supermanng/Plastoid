@@ -48,6 +48,8 @@ public sealed class PaymentsModule : IModule
         services.AddScoped<PaymentProcessing>();
         services.AddScoped<RefundIssuer>();
         services.AddScoped<IPaymentOperations, PaymentOperations>();
+        services.AddScoped<InvoiceIssuer>();
+        services.AddScoped<ISponsorInvoicing, SponsorInvoicing>();
         services.AddQuartz(q =>
         {
             var settle = new JobKey(SettlementImportJob.JobName);

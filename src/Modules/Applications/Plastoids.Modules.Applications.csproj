@@ -3,8 +3,17 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The Contracts folder builds as its own assembly so Lms/Sponsorship can reference it without a cycle. -->
+    <Compile Remove="Contracts/**" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../../Plastoids.SharedKernel/Plastoids.SharedKernel.csproj" />
     <ProjectReference Include="../../Plastoids.Infrastructure/Plastoids.Infrastructure.csproj" />
+    <ProjectReference Include="Contracts/Plastoids.Modules.Applications.Contracts.csproj" />
+    <ProjectReference Include="../Sponsorship/Contracts/Plastoids.Modules.Sponsorship.Contracts.csproj" />
+    <ProjectReference Include="../Identity/Plastoids.Modules.Identity.csproj" />
+    <ProjectReference Include="../Lms/Plastoids.Modules.Lms.csproj" />
+    <ProjectReference Include="../Payments/Plastoids.Modules.Payments.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
@@ -15,9 +24,10 @@
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
     <PackageReference Include="MediatR" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Quartz.Extensions.Hosting" />
   </ItemGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="Plastoids.Modules.Programmes.Tests" />
+    <InternalsVisibleTo Include="Plastoids.Modules.Sponsorship.Tests" />
     <InternalsVisibleTo Include="Plastoids.IntegrationTests" />
   </ItemGroup>
 </Project>

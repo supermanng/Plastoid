@@ -14,6 +14,8 @@
     <ProjectReference Include="../Modules/Booking/Plastoids.Modules.Booking.csproj" />
     <ProjectReference Include="../Modules/Lms/Plastoids.Modules.Lms.csproj" />
     <ProjectReference Include="../Modules/Certificates/Plastoids.Modules.Certificates.csproj" />
+    <ProjectReference Include="../Modules/Sponsorship/Plastoids.Modules.Sponsorship.csproj" />
+    <ProjectReference Include="../Modules/Applications/Plastoids.Modules.Applications.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />

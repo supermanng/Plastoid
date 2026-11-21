@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Contracts-only assembly: Lms and Sponsorship consume Applications' events while Applications consumes theirs (see docs/adr/0012). -->
+  <ItemGroup>
+    <ProjectReference Include="../../../Plastoids.SharedKernel/Plastoids.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

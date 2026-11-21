@@ -24,6 +24,7 @@ test-unit:     ## Unit + architecture tests (no Docker needed)
 	dotnet test tests/Plastoids.Modules.Money.Tests -c Release --nologo
 	dotnet test tests/Plastoids.Modules.Sessions.Tests -c Release --nologo
 	dotnet test tests/Plastoids.Modules.Learning.Tests -c Release --nologo
+	dotnet test tests/Plastoids.Modules.Sponsorship.Tests -c Release --nologo
 
 test-integration: ## Testcontainers (needs Docker)
 	dotnet test tests/Plastoids.IntegrationTests -c Release --nologo

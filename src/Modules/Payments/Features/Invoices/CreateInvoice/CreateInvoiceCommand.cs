@@ -3,17 +3,14 @@ using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 using Plastoids.Infrastructure.Http;
-using Plastoids.Infrastructure.Integrations;
 using Plastoids.Modules.Identity.Authorization;
 using Plastoids.Modules.Payments.Domain;
-using Plastoids.Modules.Payments.Persistence;
+using Plastoids.Modules.Payments.Services;
 using Plastoids.SharedKernel.Cqrs;
 using Plastoids.SharedKernel.Domain;
 using Plastoids.SharedKernel.Results;
 using Plastoids.SharedKernel.Tenancy;
-using Plastoids.SharedKernel.Time;
 
 namespace Plastoids.Modules.Payments.Features.Invoices.CreateInvoice;
 
@@ -48,55 +45,21 @@ internal sealed class CreateInvoiceValidator : AbstractValidator<CreateInvoiceCo
     }
 }
 
-internal sealed class CreateInvoiceHandler(PaymentsDbContext db, IPaymentGateway gateway, ICurrentUser currentUser, ICurrentTenant tenant, IClock clock) : ICommandHandler<CreateInvoiceCommand, InvoiceView>
+internal sealed class CreateInvoiceHandler(InvoiceIssuer issuer, ICurrentUser currentUser) : ICommandHandler<CreateInvoiceCommand, InvoiceView>
 {
     public async Task<Result<InvoiceView>> Handle(CreateInvoiceCommand request, CancellationToken cancellationToken)
     {
-        var now = clock.UtcNow;
-        var subtotal = Money.Zero();
-        var vatable = Money.Zero();
-        foreach (var line in request.Lines)
+        var lines = request.Lines.Select(l => (l.Kind, l.Description, l.Quantity, l.UnitAmount)).ToList();
+        var issued = await issuer.IssueAsync(request.OrganisationId, request.ProgrammeId, request.CustomerName, lines, request.DueDays, currentUser.UserId ?? Guid.Empty, cancellationToken);
+        if (issued.IsFailure)
         {
-            var amount = new Money(checked(line.UnitAmount.AmountKobo * line.Quantity), line.UnitAmount.Currency);
-            subtotal += amount;
-            if (InvoiceLineKinds.IsVatable(line.Kind))
-            {
-                vatable += amount;
-            }
+            return Result.Failure<InvoiceView>(issued.Error);
         }
 
-        var vat = Invoice.VatOn(vatable);
-        var sequence = await db.Invoices.CountAsync(i => i.IssuedAt.Year == now.Year, cancellationToken) + 1;
-        var number = $"INV-{now:yyyy}-{sequence:D5}";
-        var invoice = Invoice.Issue(tenant.TenantId, request.OrganisationId, request.ProgrammeId, number, subtotal, vat, now, request.DueDays, currentUser.UserId ?? Guid.Empty);
-
-        var account = await gateway.CreateVirtualAccountAsync(number, request.CustomerName, cancellationToken);
-        if (account.IsFailure)
-        {
-            return Result.Failure<InvoiceView>(account.Error);
-        }
-
-        invoice.AttachVirtualAccount(account.Value.BankName, account.Value.AccountNumber, account.Value.AccountName);
-        db.Invoices.Add(invoice);
-
-        var lines = new List<InvoiceLineView>();
-        var n = 0;
-        foreach (var line in request.Lines)
-        {
-            var row = InvoiceLine.Create(tenant.TenantId, invoice.Id, ++n, line.Kind, line.Description, line.Quantity, line.UnitAmount);
-            db.InvoiceLines.Add(row);
-            lines.Add(new InvoiceLineView(row.Line, row.Kind, row.Description, row.Quantity, row.UnitAmount, row.Amount));
-        }
-
-        if (!vat.IsZero)
-        {
-            var vatRow = InvoiceLine.Create(tenant.TenantId, invoice.Id, ++n, InvoiceLineKinds.Vat, "VAT 7.5% on fees", 1, vat);
-            db.InvoiceLines.Add(vatRow);
-            lines.Add(new InvoiceLineView(vatRow.Line, vatRow.Kind, vatRow.Description, 1, vat, vat));
-        }
-
+        var invoice = issued.Value.Invoice;
+        var views = issued.Value.Lines.Select(l => new InvoiceLineView(l.Line, l.Kind, l.Description, l.Quantity, l.UnitAmount, l.Amount)).ToList();
         return new InvoiceView(invoice.Id, invoice.Number, invoice.OrganisationId, invoice.ProgrammeId, invoice.Status.ToString().ToLowerInvariant(), invoice.Subtotal, invoice.Vat, invoice.Total, invoice.PaidAmount,
-            invoice.IssuedAt, invoice.DueAt, invoice.PaidAt, invoice.VirtualAccountBank, invoice.VirtualAccountNumber, invoice.VirtualAccountName, lines);
+            invoice.IssuedAt, invoice.DueAt, invoice.PaidAt, invoice.VirtualAccountBank, invoice.VirtualAccountNumber, invoice.VirtualAccountName, views);
     }
 }
 

@@ -93,6 +93,18 @@ offline batch, quizzes run through `POST …/lessons/{lessonId}/attempts` → `P
 `POST /admin/certificates/{id}/revoke` keeps the record. Cohorts: `POST /lms/cohorts`, `…/sessions`, `…/threads`.
 See `docs/adr/0011`.
 
+## Sponsorship and applications (Sprint 6)
+
+Verified sponsors build a campaign in steps (`POST`/`PUT /sponsorship/organisations/{id}/programmes[/{programmeId}]`),
+request the quote (`…/quote`: tuition, management fee 12 % min ₦3m, seat fee ₦12,000, VAT on fees) and approve it
+(`…/quote/approve`, issues the invoice). Staff review under `/admin/sponsorship/programmes/{id}/review`; paying the
+invoice funds the programme; `…/publish` opens it. Learners browse `GET /sponsorship/opportunities`, check
+`POST …/{id}/eligibility`, apply with `POST /applications/programmes/{id}/applications` (≤ 8 fields, `submit=false`
+saves a draft), sit the timed entry assessment (`POST`/`PUT /applications/{id}/assessment`) and accept offers
+(`POST /applications/{id}/offer/accept`, co-pay checkout for partial sponsorship). Staff screen under
+`/admin/applications/*` (blind queue, scoring, bulk decisions, offers, appeals); the sponsor approves the shortlist.
+Funnel (`…/funnel`, `?format=csv`), budget and the PDF impact report sit on the programme. See `docs/adr/0012`.
+
 ## Layout
 
 ```

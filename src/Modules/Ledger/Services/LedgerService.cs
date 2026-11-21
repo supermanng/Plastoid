@@ -58,6 +58,12 @@ internal sealed class LedgerService(LedgerDbContext db, IUnitOfWork unitOfWork, 
 
     public async Task<Money> GetBalanceAsync(string accountCode, Guid? ownerId, CancellationToken cancellationToken)
     {
+        // Inside a caller's transaction the ledger context must share its connection, even for a read.
+        if (unitOfWork.IsActive)
+        {
+            await unitOfWork.EnlistAsync(db, cancellationToken);
+        }
+
         var account = await db.Accounts.AsNoTracking().SingleOrDefaultAsync(a => a.Code == accountCode, cancellationToken)
             ?? throw new InvalidOperationException($"Unknown account {accountCode}.");
         var query = db.Postings.AsNoTracking().Where(p => p.AccountCode == accountCode);

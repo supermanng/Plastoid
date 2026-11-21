@@ -87,12 +87,18 @@ public class PaymentsAndLedgerTests(PlastoidsApiFactory factory)
         var before5010 = await BalanceAsync(AccountCodes.ProcessingFees);
         var settled = await staff.PostAsync("/api/v1/admin/payments/settlements/import", null);
         settled.StatusCode.Should().Be(HttpStatusCode.OK, await settled.Content.ReadAsStringAsync());
-        (await settled.Content.ReadFromJsonAsync<JsonElement>(Json)).GetProperty("settled").GetInt32().Should().BeGreaterThanOrEqualTo(1);
-        (await BalanceAsync(AccountCodes.BankClientFunds) - before1020).Should().Be(Money.NairaAmount(44_225));
-        (await BalanceAsync(AccountCodes.ProcessingFees) - before5010).Should().Be(Money.NairaAmount(775));
-        (await BalanceAsync(AccountCodes.GatewayReceivable)).Should().Be(before1030, "the receivable was cleared by settlement");
+        // The import settles every unsettled charge (other tests' payments included), so the ledger moves by the report totals; this charge contributes 45,000 gross / 775 fee.
+        var imported = await settled.Content.ReadFromJsonAsync<JsonElement>(Json);
+        imported.GetProperty("settled").GetInt32().Should().BeGreaterThanOrEqualTo(1);
+        var gross = imported.GetProperty("grossKobo").GetInt64();
+        var fees = imported.GetProperty("feesKobo").GetInt64();
+        gross.Should().BeGreaterThanOrEqualTo(4_500_000);
+        fees.Should().BeGreaterThanOrEqualTo(77_500);
+        (await BalanceAsync(AccountCodes.BankClientFunds) - before1020).Should().Be(Money.Kobo(gross - fees));
+        (await BalanceAsync(AccountCodes.ProcessingFees) - before5010).Should().Be(Money.Kobo(fees));
+        (await BalanceAsync(AccountCodes.GatewayReceivable)).Should().Be(before1030 + Money.NairaAmount(45_000) - Money.Kobo(gross), "the receivable was cleared by settlement");
         (await staff.PostAsync("/api/v1/admin/payments/settlements/import", null)).IsSuccessStatusCode.Should().BeTrue("re-import is idempotent");
-        (await BalanceAsync(AccountCodes.BankClientFunds) - before1020).Should().Be(Money.NairaAmount(44_225));
+        (await BalanceAsync(AccountCodes.BankClientFunds) - before1020).Should().Be(Money.Kobo(gross - fees));
 
         // Entry 3: sweep (hold is 0 days in tests).
         var before1010 = await BalanceAsync(AccountCodes.BankOperating);

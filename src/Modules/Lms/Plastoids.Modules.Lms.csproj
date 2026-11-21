@@ -8,7 +8,7 @@
     <ProjectReference Include="../Booking/Plastoids.Modules.Booking.csproj" />
     <ProjectReference Include="../Catalogue/Plastoids.Modules.Catalogue.csproj" />
     <ProjectReference Include="../Payments/Plastoids.Modules.Payments.csproj" />
-    <ProjectReference Include="../Applications/Plastoids.Modules.Applications.csproj" />
+    <ProjectReference Include="../Applications/Contracts/Plastoids.Modules.Applications.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
