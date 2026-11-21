@@ -50,6 +50,20 @@ the staff password and TOTP secret there are development-only values). Staff end
 and also need the caller's IP in `Admin:IpAllowList`. Secrets (`Secrets:JwtSigningKey`, `FieldEncryptionKey`,
 `BlindIndexKey`) must be set per environment; the Development ones are placeholders.
 
+## Tutors and catalogue (Sprint 2)
+
+Tutor onboarding follows blueprint §13: `POST /tutors/applications` (grants the `tutor` role; refresh the token and
+enable MFA), `POST /tutors/me/identity-check` (fake KYC passes unless the NIN ends in 0), `POST /tutors/me/credentials`
+and `POST /tutors/me/demo-lesson` (presigned uploads, reviewer queue with 3/5 working-day SLAs), staff decisions under
+`/admin/tutors/*`, then availability, pricing, calendar and payout account under `/tutors/me/*`. Verified tutors appear
+in `GET /tutors` and `GET /tutors/{id}/availability`.
+
+Courses: create → outline → lessons/quizzes → video upload (fake provider; sign the webhook with
+`Secrets:VideoWebhookSecret`) → offering → submit (automated checks, human review for the first three courses) →
+staff review under `/admin/catalogue/*` → publish. Learners use `GET /catalogue/courses` (full-text, filters,
+`funding=sponsored`, zero-result suggestions), `GET /catalogue/courses/{slug}` (30-minute price quotes) and
+`GET /catalogue/courses/compare?ids=`. See `docs/adr/0008`.
+
 ## Layout
 
 ```

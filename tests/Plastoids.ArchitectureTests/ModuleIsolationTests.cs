@@ -36,8 +36,10 @@ public class ModuleIsolationTests
             foreach (var other in others)
             {
                 var otherNs = ModuleNamespace(other);
+                // NetArchTest matches dependency namespaces by prefix, so the module root (which only holds the
+                // <Name>Module class) must be left out or every Contracts reference would be flagged.
                 var forbidden = other.GetTypes()
-                    .Where(t => t.Namespace is not null && t.Namespace.StartsWith(otherNs, StringComparison.Ordinal) && !t.Namespace.StartsWith(otherNs + ".Contracts", StringComparison.Ordinal))
+                    .Where(t => t.Namespace is not null && t.Namespace.StartsWith(otherNs + ".", StringComparison.Ordinal) && !t.Namespace.StartsWith(otherNs + ".Contracts", StringComparison.Ordinal))
                     .Select(t => t.Namespace!)
                     .Distinct()
                     .ToArray();

@@ -1,11 +1,14 @@
 using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Plastoids.SharedKernel.Domain;
 
 /// <summary>
 /// Money stored as an integer amount of the smallest unit (kobo for NGN) plus an ISO 4217 code.
-/// Never floating point. Arithmetic across currencies throws.
+/// Never floating point. Arithmetic across currencies throws. On the wire it is { "amount": kobo, "currency": "NGN" }.
 /// </summary>
+[JsonConverter(typeof(MoneyJsonConverter))]
 public readonly record struct Money : IComparable<Money>
 {
     public const string Naira = "NGN";
@@ -77,4 +80,51 @@ public readonly record struct Money : IComparable<Money>
         => other.Currency == Currency
             ? other
             : throw new InvalidOperationException($"Currency mismatch: {Currency} vs {other.Currency}.");
+}
+
+/// <summary>Blueprint §17: money as { "amount": 4500000, "currency": "NGN" } (amount in kobo).</summary>
+public sealed class MoneyJsonConverter : JsonConverter<Money>
+{
+    public override Money Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.StartObject)
+        {
+            throw new JsonException("Money must be an object { amount, currency }.");
+        }
+
+        long? amount = null;
+        string? currency = null;
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var name = reader.GetString();
+            reader.Read();
+            if (string.Equals(name, "amount", StringComparison.OrdinalIgnoreCase) || string.Equals(name, "amountKobo", StringComparison.OrdinalIgnoreCase))
+            {
+                amount = reader.GetInt64();
+            }
+            else if (string.Equals(name, "currency", StringComparison.OrdinalIgnoreCase))
+            {
+                currency = reader.GetString();
+            }
+            else
+            {
+                reader.Skip();
+            }
+        }
+
+        if (amount is null)
+        {
+            throw new JsonException("Money needs an integer 'amount' in kobo.");
+        }
+
+        return new Money(amount.Value, currency ?? Money.Naira);
+    }
+
+    public override void Write(Utf8JsonWriter writer, Money value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WriteNumber("amount", value.AmountKobo);
+        writer.WriteString("currency", value.Currency);
+        writer.WriteEndObject();
+    }
 }

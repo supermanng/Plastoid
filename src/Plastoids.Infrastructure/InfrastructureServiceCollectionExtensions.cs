@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Plastoids.Infrastructure.Behaviours;
+using Plastoids.Infrastructure.Integrations;
 using Plastoids.Infrastructure.Jobs;
 using Plastoids.Infrastructure.Messaging.Kafka;
 using Plastoids.Infrastructure.Messaging.Outbox;
@@ -70,6 +71,12 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IBlobStorage, S3BlobStorage>();
         services.AddSingleton<ISecretProvider, ConfigurationSecretProvider>();
 
+        // Outbound integrations (blueprint §17): fakes unless Integrations:<Name> selects a real provider.
+        AddIntegration<IKycProvider, FakeKycProvider, SmileIdKycProvider>(services, configuration, "Kyc", "smileid");
+        AddIntegration<IBankAccountResolver, FakeBankAccountResolver, PaystackBankAccountResolver>(services, configuration, "BankResolver", "paystack");
+        AddIntegration<ICalendarProvider, FakeCalendarProvider, GoogleCalendarProvider>(services, configuration, "Calendar", "google");
+        AddIntegration<IVideoProvider, FakeVideoProvider, MuxVideoProvider>(services, configuration, "Video", "mux");
+
         // Security primitives (column encryption, password hashing) and outbound SMS.
         services.AddSingleton<IFieldEncryptor, AesGcmFieldEncryptor>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
@@ -106,6 +113,22 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddValidatorsFromAssembly(typeof(InfrastructureServiceCollectionExtensions).Assembly, includeInternalTypes: true);
 
         return services;
+    }
+
+    private static void AddIntegration<TInterface, TFake, TReal>(IServiceCollection services, IConfiguration configuration, string name, string realKey)
+        where TInterface : class
+        where TFake : class, TInterface
+        where TReal : class, TInterface
+    {
+        if (string.Equals(configuration[$"Integrations:{name}"], realKey, StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddSingleton<TInterface, TReal>();
+        }
+        else
+        {
+            services.AddSingleton<TFake>();
+            services.AddSingleton<TInterface>(sp => sp.GetRequiredService<TFake>());
+        }
     }
 
     /// <summary>Registers a module: services, DbContext, handlers, validators, outbox job, consumer host, topics.</summary>

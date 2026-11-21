@@ -7,7 +7,9 @@ using Plastoids.Infrastructure.Observability;
 using Plastoids.Infrastructure.Security;
 using Plastoids.Infrastructure.Persistence;
 using Plastoids.Modules.Audit;
+using Plastoids.Modules.Catalogue;
 using Plastoids.Modules.Identity;
+using Plastoids.Modules.Tutors;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +26,11 @@ services.AddPlastoidsTelemetry(configuration["Otlp:Endpoint"]);
 // ---- Modules (order = migration order) ----
 services.AddModule<IdentityModule>(configuration);
 services.AddModule<AuditModule>(configuration);
+services.AddModule<TutorsModule>(configuration);
+services.AddModule<CatalogueModule>(configuration);
+
+// Enums travel as camelCase strings on the wire ("monday", "selfPaced"), per blueprint §17 JSON conventions.
+services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase)));
 
 services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
 {

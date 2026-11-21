@@ -54,6 +54,7 @@ public sealed class IdentityModule : IModule
         services.AddSingleton<SmokeEventSink>();
         services.AddScoped<OtpService>();
         services.AddScoped<TokenIssuer>();
+        services.AddScoped<IPlatformRoles, PlatformRoles>();
         services.AddSingleton<IGoogleIdTokenVerifier, NotConfiguredGoogleIdTokenVerifier>();
         services.AddScoped<IAuthorizationHandler, OrganisationRoleHandler>();
         services.Configure<SeedOptions>(configuration.GetSection(SeedOptions.SectionName));
