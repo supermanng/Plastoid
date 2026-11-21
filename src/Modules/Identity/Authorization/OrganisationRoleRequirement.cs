@@ -14,6 +14,9 @@ public static class IdentityPolicies
 
     /// <summary>Caller holds any role in the organisation in the route's {organisationId}.</summary>
     public const string OrganisationMember = "organisation-member";
+
+    /// <summary>Owner or finance: may create invoices and pay (blueprint §9.5 roles).</summary>
+    public const string OrganisationFinance = "organisation-finance";
 }
 
 /// <summary>Build prompt §2.10: ownership is evaluated in an IAuthorizationHandler per resource type, not in handlers.</summary>

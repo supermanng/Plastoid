@@ -76,6 +76,22 @@ public static class InfrastructureServiceCollectionExtensions
         AddIntegration<IBankAccountResolver, FakeBankAccountResolver, PaystackBankAccountResolver>(services, configuration, "BankResolver", "paystack");
         AddIntegration<ICalendarProvider, FakeCalendarProvider, GoogleCalendarProvider>(services, configuration, "Calendar", "google");
         AddIntegration<IVideoProvider, FakeVideoProvider, MuxVideoProvider>(services, configuration, "Video", "mux");
+        AddIntegration<IGatewaySettlementReport, FakeGatewaySettlementReport, FakeGatewaySettlementReport>(services, configuration, "SettlementReport", "none");
+        AddIntegration<IBankStatement, FakeBankStatement, FakeBankStatement>(services, configuration, "BankStatement", "none");
+        var gateway = configuration["Integrations:PaymentGateway"] ?? "fake";
+        switch (gateway.ToLowerInvariant())
+        {
+            case "paystack":
+                services.AddHttpClient<IPaymentGateway, PaystackGateway>();
+                break;
+            case "flutterwave":
+                services.AddSingleton<IPaymentGateway, FlutterwaveGateway>();
+                break;
+            default:
+                services.AddSingleton<FakePaymentGateway>();
+                services.AddSingleton<IPaymentGateway>(sp => sp.GetRequiredService<FakePaymentGateway>());
+                break;
+        }
 
         // Security primitives (column encryption, password hashing) and outbound SMS.
         services.AddSingleton<IFieldEncryptor, AesGcmFieldEncryptor>();

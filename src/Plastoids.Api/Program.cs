@@ -9,6 +9,8 @@ using Plastoids.Infrastructure.Persistence;
 using Plastoids.Modules.Audit;
 using Plastoids.Modules.Catalogue;
 using Plastoids.Modules.Identity;
+using Plastoids.Modules.Ledger;
+using Plastoids.Modules.Payments;
 using Plastoids.Modules.Tutors;
 using Serilog;
 
@@ -28,6 +30,8 @@ services.AddModule<IdentityModule>(configuration);
 services.AddModule<AuditModule>(configuration);
 services.AddModule<TutorsModule>(configuration);
 services.AddModule<CatalogueModule>(configuration);
+services.AddModule<LedgerModule>(configuration);
+services.AddModule<PaymentsModule>(configuration);
 
 // Enums travel as camelCase strings on the wire ("monday", "selfPaced"), per blueprint §17 JSON conventions.
 services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase)));

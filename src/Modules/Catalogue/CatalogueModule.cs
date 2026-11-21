@@ -44,6 +44,7 @@ public sealed class CatalogueModule : IModule
         services.AddScoped<OutlineSnapshot>();
         services.AddScoped<AutomatedChecks>();
         services.AddSingleton<PriceQuotes>();
+        services.AddScoped<IPriceQuoteReader, PriceQuoteReader>();
         services.AddSingleton<StubEnrolmentProgress>();
         services.AddSingleton<IEnrolmentProgress>(sp => sp.GetRequiredService<StubEnrolmentProgress>());
     }

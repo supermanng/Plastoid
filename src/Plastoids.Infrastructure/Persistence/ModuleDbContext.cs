@@ -107,6 +107,11 @@ public static class ModelConventions
             foreach (var clrProperty in entityType.ClrType.GetProperties())
             {
                 var propType = Nullable.GetUnderlyingType(clrProperty.PropertyType) ?? clrProperty.PropertyType;
+                if (clrProperty.SetMethod is null || entityType.IsIgnored(clrProperty.Name))
+                {
+                    continue; // computed (get-only) or explicitly ignored Money properties are not columns
+                }
+
                 if (propType == typeof(Money) && entityType.FindProperty(clrProperty.Name) is null && entityType.FindComplexProperty(clrProperty.Name) is null)
                 {
                     modelBuilder.Entity(entityType.ClrType).ComplexProperty(typeof(Money), clrProperty.Name, cp =>

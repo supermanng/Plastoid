@@ -64,6 +64,16 @@ staff review under `/admin/catalogue/*` → publish. Learners use `GET /catalogu
 `funding=sponsored`, zero-result suggestions), `GET /catalogue/courses/{slug}` (30-minute price quotes) and
 `GET /catalogue/courses/compare?ids=`. See `docs/adr/0008`.
 
+## Payments and ledger (Sprint 3)
+
+`POST /payments/intents` (Idempotency-Key) starts a hosted checkout from a course quote; the gateway webhook at
+`POST /payments/webhooks/{gateway}` (HMAC-verified) or `POST /payments/intents/{id}/verify` confirms it and posts
+ledger entry 1. Staff run settlement import and the revenue sweep under `/admin/payments/*` (entries 2 and 3), issue
+refunds (entry 5, four-eyes above ₦100,000) and read balances, journal entries and the reconciliation status under
+`/admin/ledger/*`. Sponsors invoice through `POST /payments/organisations/{id}/invoices`; the virtual-account credit
+webhook matches the invoice (entry 6). Locally the fake gateway signs webhooks with `Secrets:PaymentWebhookSecret`
+(default `fake-payment-webhook-secret`). See `docs/adr/0009`.
+
 ## Layout
 
 ```

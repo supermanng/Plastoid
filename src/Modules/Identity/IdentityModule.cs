@@ -61,7 +61,8 @@ public sealed class IdentityModule : IModule
 
         services.AddAuthorizationBuilder()
             .AddPolicy(IdentityPolicies.OrganisationOwner, p => p.RequireAuthenticatedUser().AddRequirements(new OrganisationRoleRequirement([OrganisationRoles.Owner])))
-            .AddPolicy(IdentityPolicies.OrganisationMember, p => p.RequireAuthenticatedUser().AddRequirements(new OrganisationRoleRequirement(OrganisationRoles.All)));
+            .AddPolicy(IdentityPolicies.OrganisationMember, p => p.RequireAuthenticatedUser().AddRequirements(new OrganisationRoleRequirement(OrganisationRoles.All)))
+            .AddPolicy(IdentityPolicies.OrganisationFinance, p => p.RequireAuthenticatedUser().AddRequirements(new OrganisationRoleRequirement([OrganisationRoles.Owner, OrganisationRoles.Finance])));
 
         services.AddQuartz(q =>
         {

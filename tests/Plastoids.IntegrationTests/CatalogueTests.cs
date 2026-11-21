@@ -17,6 +17,32 @@ namespace Plastoids.IntegrationTests;
 [Collection(ApiCollection.Name)]
 public class CatalogueTests(PlastoidsApiFactory factory)
 {
+    /// <summary>A verified tutor with one published, sponsorable self-paced course (₦45,000). Used by Payments tests.</summary>
+    internal static async Task<(HttpClient Tutor, Guid TutorUserId, string Slug, Guid CourseId)> PublishedCourseAsync(PlastoidsApiFactory factory)
+    {
+        var (tutor, userId, _) = await VerifiedTutorAsync(factory);
+        var created = await tutor.PostAsJsonAsync("/api/v1/catalogue/courses", new { title = $"Paid course {Guid.NewGuid():N}", summary = "x", level = "beginner", language = "en", category = "data", skills = new[] { "sql" } });
+        var course = await created.Content.ReadFromJsonAsync<JsonElement>(Json);
+        var courseId = course.GetProperty("courseId").GetGuid();
+        var slug = course.GetProperty("slug").GetString()!;
+        var outline = await tutor.PutAsJsonAsync($"/api/v1/catalogue/courses/{courseId}/outline", new { summary = "A course long enough to pass the automated summary check with plenty of practical content for learners who want to get started.", modules = new[] { new { title = "Intro", order = 1 } } });
+        var moduleId = (await outline.Content.ReadFromJsonAsync<JsonElement>(Json)).GetProperty("modules")[0].GetProperty("id").GetGuid();
+        await tutor.PostAsJsonAsync($"/api/v1/catalogue/courses/{courseId}/modules/{moduleId}/lessons", new { type = "doc", title = "Read me", order = 1, durationMinutes = 5, isPreview = false, contentJson = (string?)null });
+        await tutor.PostAsJsonAsync($"/api/v1/catalogue/courses/{courseId}/offerings", new { format = "self_paced", price = new { amount = 4500000, currency = "NGN" }, fundingTypes = new[] { "self", "sponsored" }, capacity = (int?)null, startAt = (DateTime?)null, durationWeeks = 4 });
+        var submit = await tutor.PostAsync($"/api/v1/catalogue/courses/{courseId}/submit", null);
+        submit.IsSuccessStatusCode.Should().BeTrue(await submit.Content.ReadAsStringAsync());
+        if ((await submit.Content.ReadFromJsonAsync<JsonElement>(Json)).GetProperty("requiresHumanReview").GetBoolean())
+        {
+            var staff = await factory.SignInAsStaffAsync();
+            staff.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
+            (await staff.PostAsJsonAsync($"/api/v1/admin/catalogue/courses/{courseId}/review", new { decision = "approved" })).IsSuccessStatusCode.Should().BeTrue();
+        }
+
+        var published = await tutor.PostAsync($"/api/v1/catalogue/courses/{courseId}/publish", null);
+        published.IsSuccessStatusCode.Should().BeTrue(await published.Content.ReadAsStringAsync());
+        return (tutor, userId, slug, courseId);
+    }
+
     private static async Task<(HttpClient Tutor, Guid UserId, Guid TutorId)> VerifiedTutorAsync(PlastoidsApiFactory factory)
     {
         var (tutor, userId, tutorId) = await TutorOnboardingTests.ApplyAsTutorAsync(factory, "Course author");
