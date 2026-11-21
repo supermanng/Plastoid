@@ -10,6 +10,7 @@ using Plastoids.Modules.Ledger.Contracts;
 using Plastoids.Modules.Ledger.Features.Admin.GetBalance;
 using Plastoids.Modules.Ledger.Features.Admin.GetReconciliationStatus;
 using Plastoids.Modules.Ledger.Features.Admin.ListJournalEntries;
+using Plastoids.Modules.Ledger.Features.Admin.UnfreezePayouts;
 using Plastoids.Modules.Ledger.Jobs;
 using Plastoids.Modules.Ledger.Persistence;
 using Plastoids.Modules.Ledger.Services;
@@ -52,6 +53,7 @@ public sealed class LedgerModule : IModule
         GetBalanceEndpoint.Map(admin);
         ListJournalEntriesEndpoint.Map(admin);
         GetReconciliationStatusEndpoint.Map(admin);
+        UnfreezePayoutsEndpoint.Map(admin);
     }
 
     public IEnumerable<ConsumerRegistration> Consumers() => [];

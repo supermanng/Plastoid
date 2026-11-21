@@ -113,6 +113,93 @@ namespace Plastoids.Modules.Payments.Persistence.Migrations
                     b.ToTable("payments_outbox", (string)null);
                 });
 
+            modelBuilder.Entity("Plastoids.Modules.Payments.Domain.FeeRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<int>("CommissionBps")
+                        .HasColumnType("int")
+                        .HasColumnName("commission_bps");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DecidedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("decided_at");
+
+                    b.Property<Guid?>("DecidedBy")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("decided_by");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("decision_note");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("effective_from");
+
+                    b.Property<DateTime>("ProposedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("proposed_at");
+
+                    b.Property<Guid>("ProposedBy")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("proposed_by");
+
+                    b.Property<string>("Rationale")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("rationale");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("RuleCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)")
+                        .HasColumnName("rule_code");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payments_fee_rules");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_payments_fee_rules_tenant_id");
+
+                    b.HasIndex("RuleCode", "Status", "EffectiveFrom")
+                        .HasDatabaseName("ix_payments_fee_rules_rule_code_status_effective_from");
+
+                    b.ToTable("payments_fee_rules", (string)null);
+                });
+
             modelBuilder.Entity("Plastoids.Modules.Payments.Domain.GatewayEvent", b =>
                 {
                     b.Property<Guid>("Id")

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using Plastoids.Infrastructure.Integrations;
 using Plastoids.Modules.Ledger.Contracts;
 using Plastoids.Modules.Ledger.Services;
@@ -131,11 +130,13 @@ public class PaymentPostingsTests
     [Fact]
     public void Fee_rules_follow_the_blueprint_rates()
     {
-        var rules = new FeeRules(Options.Create(new FeeOptions()));
-        rules.Resolve(new SaleContext(PaymentPurposes.Course, LearnerSources.Platform)).CommissionBps.Should().Be(2000);
-        rules.Resolve(new SaleContext(PaymentPurposes.Course, LearnerSources.TutorReferred)).CommissionBps.Should().Be(800);
-        rules.Resolve(new SaleContext(PaymentPurposes.Booking, LearnerSources.Platform)).CommissionBps.Should().Be(1500);
-        rules.Resolve(new SaleContext(PaymentPurposes.CoPay, LearnerSources.Platform)).CommissionBps.Should().Be(0);
+        // Without an approved fee rule (Sprint 8 back office), the defaults apply.
+        var options = new FeeOptions();
+        static int Bps(SaleContext c, FeeOptions o) => FeeRules.DefaultBps(FeeRules.CodeFor(c), o);
+        Bps(new SaleContext(PaymentPurposes.Course, LearnerSources.Platform), options).Should().Be(2000);
+        Bps(new SaleContext(PaymentPurposes.Course, LearnerSources.TutorReferred), options).Should().Be(800);
+        Bps(new SaleContext(PaymentPurposes.Booking, LearnerSources.Platform), options).Should().Be(1500);
+        Bps(new SaleContext(PaymentPurposes.CoPay, LearnerSources.Platform), options).Should().Be(0);
     }
 
     [Fact]

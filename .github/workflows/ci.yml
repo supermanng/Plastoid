@@ -25,6 +25,16 @@ jobs:
       - name: Build (warnings are errors)
         run: dotnet build Plastoids.sln -c Release --no-restore
 
+      - name: Dependency audit (fails on any known vulnerability)
+        run: |
+          dotnet list Plastoids.sln package --vulnerable --include-transitive | tee audit.txt
+          ! grep -q "has the following vulnerable packages" audit.txt
+
+      - name: Secrets scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Unit and architecture tests
         run: |
           dotnet test tests/Plastoids.SharedKernel.Tests -c Release --no-build --logger "trx;LogFileName=kernel.trx" --collect:"XPlat Code Coverage"
@@ -35,6 +45,9 @@ jobs:
           dotnet test tests/Plastoids.Modules.Sessions.Tests -c Release --no-build --logger "trx;LogFileName=sessions.trx" --collect:"XPlat Code Coverage"
           dotnet test tests/Plastoids.Modules.Learning.Tests -c Release --no-build --logger "trx;LogFileName=learning.trx" --collect:"XPlat Code Coverage"
           dotnet test tests/Plastoids.Modules.Sponsorship.Tests -c Release --no-build --logger "trx;LogFileName=sponsorship.trx" --collect:"XPlat Code Coverage"
+          dotnet test tests/Plastoids.Modules.Payouts.Tests -c Release --no-build --logger "trx;LogFileName=payouts.trx" --collect:"XPlat Code Coverage"
+          dotnet test tests/Plastoids.Modules.Notifications.Tests -c Release --no-build --logger "trx;LogFileName=notifications.trx" --collect:"XPlat Code Coverage"
+          dotnet test tests/Plastoids.Modules.BackOffice.Tests -c Release --no-build --logger "trx;LogFileName=backoffice.trx" --collect:"XPlat Code Coverage"
 
       - name: Integration tests (Testcontainers)
         run: dotnet test tests/Plastoids.IntegrationTests -c Release --no-build --logger "trx;LogFileName=integration.trx"

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Plastoids.SharedKernel/Plastoids.SharedKernel.csproj" />
+    <ProjectReference Include="../../Plastoids.Infrastructure/Plastoids.Infrastructure.csproj" />
+    <ProjectReference Include="../Identity/Plastoids.Modules.Identity.csproj" />
+    <ProjectReference Include="../Booking/Plastoids.Modules.Booking.csproj" />
+    <ProjectReference Include="../Lms/Plastoids.Modules.Lms.csproj" />
+    <ProjectReference Include="../Certificates/Plastoids.Modules.Certificates.csproj" />
+    <ProjectReference Include="../Payouts/Plastoids.Modules.Payouts.csproj" />
+    <ProjectReference Include="../Applications/Contracts/Plastoids.Modules.Applications.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Quartz.Extensions.Hosting" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Plastoids.Modules.Notifications.Tests" />
+    <InternalsVisibleTo Include="Plastoids.IntegrationTests" />
+  </ItemGroup>
+</Project>

@@ -78,7 +78,14 @@ internal sealed class LedgerService(LedgerDbContext db, IUnitOfWork unitOfWork, 
     }
 
     public async Task<bool> ArePayoutsFrozenAsync(CancellationToken cancellationToken)
-        => await db.Controls.AsNoTracking().Where(c => c.Id == LedgerControl.SingletonId).Select(c => c.PayoutsFrozen).SingleOrDefaultAsync(cancellationToken);
+    {
+        if (unitOfWork.IsActive)
+        {
+            await unitOfWork.EnlistAsync(db, cancellationToken);
+        }
+
+        return await db.Controls.AsNoTracking().Where(c => c.Id == LedgerControl.SingletonId).Select(c => c.PayoutsFrozen).SingleOrDefaultAsync(cancellationToken);
+    }
 
     /// <summary>Build prompt §2.9: a draft whose postings do not sum to zero is rejected before it reaches the database.</summary>
     public static Result Validate(JournalEntryDraft draft)

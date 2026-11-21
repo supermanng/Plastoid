@@ -27,6 +27,7 @@ using Plastoids.Modules.Identity.Features.Me.UpdateMe;
 using Plastoids.Modules.Identity.Features.Organisations.AddMember;
 using Plastoids.Modules.Identity.Features.Organisations.ChangeMemberRole;
 using Plastoids.Modules.Identity.Features.Organisations.RegisterOrganisation;
+using Plastoids.Modules.Identity.Features.Admin.RoleGrants;
 using Plastoids.Modules.Identity.Features.Organisations.VerifyOrganisation;
 using Plastoids.Modules.Identity.Jobs;
 using Plastoids.Modules.Identity.Persistence;
@@ -57,6 +58,8 @@ public sealed class IdentityModule : IModule
         services.AddScoped<IPlatformRoles, PlatformRoles>();
         services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<IOrganisationDirectory, OrganisationDirectory>();
+        services.AddScoped<IUserAdministration, UserAdministration>();
+        services.AddScoped<IUserContacts, UserContacts>();
         services.AddSingleton<IGoogleIdTokenVerifier, NotConfiguredGoogleIdTokenVerifier>();
         services.AddScoped<IAuthorizationHandler, OrganisationRoleHandler>();
         services.Configure<SeedOptions>(configuration.GetSection(SeedOptions.SectionName));
@@ -108,6 +111,7 @@ public sealed class IdentityModule : IModule
         // Staff endpoints live under /api/v1/admin/* (IP allow-list middleware + staff-admin policy).
         var admin = endpoints.MapGroup("/admin/identity").WithTags("Identity (staff)");
         VerifyOrganisationEndpoint.Map(admin);
+        RoleGrantEndpoints.Map(admin);
 
         if (endpoints.ServiceProvider.GetRequiredService<IConfiguration>().GetValue<bool>("Diagnostics:Enabled"))
         {

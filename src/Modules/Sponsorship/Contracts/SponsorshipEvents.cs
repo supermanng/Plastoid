@@ -1,3 +1,4 @@
+using Plastoids.SharedKernel.Domain;
 using Plastoids.SharedKernel.Messaging;
 
 namespace Plastoids.Modules.Sponsorship.Contracts;
@@ -17,3 +18,7 @@ public sealed record SeatFilled(Guid AggregateId, Guid ProgrammeId, Guid SeatId,
 /// <summary>sponsorship.seat-released.v1: a filled seat was given up; Applications backfills it from the waitlist.</summary>
 [IntegrationEvent("sponsorship", "seat-released", 1)]
 public sealed record SeatReleased(Guid AggregateId, Guid ProgrammeId, Guid SeatId, string Reason) : IIntegrationEvent;
+
+/// <summary>sponsorship.tutor-earnings-accrued.v1: entry 9 for a programme month was posted; Payouts treats it as payable (delivered teaching, blueprint §18).</summary>
+[IntegrationEvent("sponsorship", "tutor-earnings-accrued", 1)]
+public sealed record TutorEarningsAccrued(Guid AggregateId, Guid ProgrammeId, Guid TutorUserId, int MonthIndex, Money Amount) : IIntegrationEvent;

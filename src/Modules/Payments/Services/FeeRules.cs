@@ -1,5 +1,10 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Plastoids.Infrastructure.Persistence;
 using Plastoids.Modules.Payments.Contracts;
+using Plastoids.Modules.Payments.Domain;
+using Plastoids.Modules.Payments.Persistence;
+using Plastoids.SharedKernel.Time;
 
 namespace Plastoids.Modules.Payments.Services;
 
@@ -20,18 +25,51 @@ public sealed class FeeOptions
     public int CoPayBps { get; set; }
 }
 
-/// <summary>Resolved at sale time and stored on the transaction row (blueprint §18 fee rules). Pro tiers arrive with subscriptions.</summary>
-internal sealed class FeeRules(IOptions<FeeOptions> options) : IFeeRules
+/// <summary>
+/// Resolved at sale time and stored on the transaction row (blueprint §18 fee rules). An approved, versioned fee rule
+/// effective at the sale instant wins; otherwise the configured defaults apply. Pro tiers arrive with subscriptions.
+/// </summary>
+internal sealed class FeeRules(PaymentsDbContext db, IUnitOfWork unitOfWork, IOptions<FeeOptions> options, IClock clock) : IFeeRules
 {
+    private List<FeeRule>? _approved;
+
     public FeeDecision Resolve(SaleContext context)
     {
-        var o = options.Value;
-        return context.Purpose switch
+        var code = CodeFor(context);
+        var rule = FeeRule.EffectiveAt(Approved(), code, clock.UtcNow);
+        return rule is null ? new FeeDecision(DefaultBps(code, options.Value), code) : new FeeDecision(rule.CommissionBps, $"{code}:v{rule.Version}");
+    }
+
+    public static string CodeFor(SaleContext context) => context.Purpose switch
+    {
+        PaymentPurposes.Booking => "live_tutoring",
+        PaymentPurposes.CoPay => "co_pay",
+        _ when context.LearnerSource == LearnerSources.TutorReferred => "course_tutor_referred",
+        _ => "course_platform",
+    };
+
+    public static int DefaultBps(string code, FeeOptions o) => code switch
+    {
+        "live_tutoring" => o.LiveTutoringBps,
+        "co_pay" => o.CoPayBps,
+        "course_tutor_referred" => o.CourseTutorReferredBps,
+        _ => o.CoursePlatformBps,
+    };
+
+    private List<FeeRule> Approved()
+    {
+        if (_approved is not null)
         {
-            PaymentPurposes.Booking => new FeeDecision(o.LiveTutoringBps, "live_tutoring"),
-            PaymentPurposes.CoPay => new FeeDecision(o.CoPayBps, "co_pay"),
-            _ when context.LearnerSource == LearnerSources.TutorReferred => new FeeDecision(o.CourseTutorReferredBps, "course_tutor_referred"),
-            _ => new FeeDecision(o.CoursePlatformBps, "course_platform"),
-        };
+            return _approved;
+        }
+
+        // IFeeRules is synchronous by contract (resolved inline at sale time); the approved set is small and read once per scope.
+        if (unitOfWork.IsActive)
+        {
+            unitOfWork.EnlistAsync(db, CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        _approved = db.FeeRules.AsNoTracking().Where(r => r.Status == FeeRuleStatus.Approved).ToList();
+        return _approved;
     }
 }

@@ -44,6 +44,7 @@ public sealed class SponsorshipModule : IModule
         new(EnvelopeSerializer.GetAttribute(typeof(ProgrammePublished)).Topic),
         new(EnvelopeSerializer.GetAttribute(typeof(SeatFilled)).Topic),
         new(EnvelopeSerializer.GetAttribute(typeof(SeatReleased)).Topic),
+        new(EnvelopeSerializer.GetAttribute(typeof(TutorEarningsAccrued)).Topic),
         new(EnvelopeSerializer.GetAttribute(typeof(NotificationRequested)).Topic),
     ];
 

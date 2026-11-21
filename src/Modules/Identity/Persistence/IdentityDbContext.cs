@@ -17,6 +17,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<MfaRecoveryCode> MfaRecoveryCodes => Set<MfaRecoveryCode>();
     public DbSet<DataExportRequest> DataExportRequests => Set<DataExportRequest>();
+    public DbSet<RoleGrantProposal> RoleGrants => Set<RoleGrantProposal>();
 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {

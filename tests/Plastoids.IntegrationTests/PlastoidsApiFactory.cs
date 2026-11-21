@@ -111,6 +111,7 @@ public sealed class PlastoidsApiFactory : WebApplicationFactory<Plastoids.Api.Pr
             ["Seed:StaffPassword"] = StaffPassword,
             ["Seed:StaffMfaSecret"] = StaffMfaSecret,
             ["Payments:SweepHoldDays"] = "0",
+            ["Payouts:CourseSaleHoldDays"] = "0",
             ["RateLimiting:AuthPermitsPerMinute"] = "10000",
             ["RateLimiting:GlobalTokensPerMinute"] = "100000",
             ["Admin:IpAllowList:0"] = "127.0.0.1",

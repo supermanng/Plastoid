@@ -16,9 +16,20 @@ public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> option
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
     public DbSet<IncomingTransfer> Transfers => Set<IncomingTransfer>();
     public DbSet<GatewayEvent> GatewayEvents => Set<GatewayEvent>();
+    public DbSet<FeeRule> FeeRules => Set<FeeRule>();
 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<FeeRule>(b =>
+        {
+            b.ToTable("payments_fee_rules");
+            b.Property(x => x.RuleCode).HasMaxLength(40);
+            b.Property(x => x.Rationale).HasMaxLength(1000);
+            b.Property(x => x.DecisionNote).HasMaxLength(1000);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            b.HasIndex(x => new { x.RuleCode, x.Status, x.EffectiveFrom });
+        });
+
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PaymentsDbContext).Assembly);
     }
 }

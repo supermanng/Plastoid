@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Plastoids.SharedKernel/Plastoids.SharedKernel.csproj" />
+    <ProjectReference Include="../../Plastoids.Infrastructure/Plastoids.Infrastructure.csproj" />
+    <ProjectReference Include="../Identity/Plastoids.Modules.Identity.csproj" />
+    <ProjectReference Include="../Audit/Plastoids.Modules.Audit.csproj" />
+    <ProjectReference Include="../Tutors/Plastoids.Modules.Tutors.csproj" />
+    <ProjectReference Include="../Catalogue/Plastoids.Modules.Catalogue.csproj" />
+    <ProjectReference Include="../Ledger/Plastoids.Modules.Ledger.csproj" />
+    <ProjectReference Include="../Payments/Plastoids.Modules.Payments.csproj" />
+    <ProjectReference Include="../Booking/Plastoids.Modules.Booking.csproj" />
+    <ProjectReference Include="../Lms/Plastoids.Modules.Lms.csproj" />
+    <ProjectReference Include="../Payouts/Plastoids.Modules.Payouts.csproj" />
+    <ProjectReference Include="../Sponsorship/Contracts/Plastoids.Modules.Sponsorship.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Plastoids.Modules.BackOffice.Tests" />
+    <InternalsVisibleTo Include="Plastoids.IntegrationTests" />
+  </ItemGroup>
+</Project>

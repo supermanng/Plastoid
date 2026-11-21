@@ -3,9 +3,11 @@ using Microsoft.Extensions.Logging;
 using Plastoids.Infrastructure.Persistence;
 using Plastoids.Infrastructure.Tenancy;
 using Plastoids.Modules.Ledger.Contracts;
+using Plastoids.Modules.Sponsorship.Contracts;
 using Plastoids.Modules.Sponsorship.Domain;
 using Plastoids.Modules.Sponsorship.Persistence;
 using Plastoids.Modules.Sponsorship.Services;
+using Plastoids.SharedKernel.Messaging;
 using Plastoids.SharedKernel.Tenancy;
 using Plastoids.SharedKernel.Time;
 using Quartz;
@@ -17,7 +19,7 @@ namespace Plastoids.Modules.Sponsorship.Jobs;
 /// and entry 9 (tutor earnings for the month) are posted once. Runs nightly; a month is "completed" once 30.44 days have elapsed.
 /// </summary>
 [DisallowConcurrentExecution]
-public sealed class MonthlyFeesJob(SponsorshipDbContext db, IUnitOfWork unitOfWork, ILedgerService ledger, IClock clock, ILogger<MonthlyFeesJob> logger) : IJob
+public sealed class MonthlyFeesJob(SponsorshipDbContext db, IUnitOfWork unitOfWork, ILedgerService ledger, IOutbox outbox, IClock clock, ILogger<MonthlyFeesJob> logger) : IJob
 {
     public const string JobName = "sponsorship-monthly-fees";
     private const double DaysPerMonth = 30.4375;
@@ -57,6 +59,7 @@ public sealed class MonthlyFeesJob(SponsorshipDbContext db, IUnitOfWork unitOfWo
                 if (!tuition.IsZero && programme.TutorUserId is not null)
                 {
                     Throw(await ledger.PostAsync(SponsorshipPostings.Entry9TutorEarnings(programme, month, tuition, now), ct));
+                    outbox.Enqueue(new TutorEarningsAccrued(programme.Id, programme.Id, programme.TutorUserId.Value, month, tuition));
                 }
 
                 db.Months.Add(ProgrammeMonth.Record(programme.TenantId, programme.Id, month, filled, management, tuition, now));

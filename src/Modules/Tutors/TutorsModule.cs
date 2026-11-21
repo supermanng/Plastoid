@@ -43,6 +43,8 @@ public sealed class TutorsModule : IModule
     {
         services.AddScoped<TutorAccess>();
         services.AddScoped<ITutorSchedule, TutorSchedule>();
+        services.AddScoped<ITutorPayoutAccounts, TutorPayoutAccounts>();
+        services.AddScoped<ITutorVerificationQueue, TutorVerificationQueue>();
         services.AddQuartz(q =>
         {
             var key = new JobKey(ReviewSlaJob.JobName);

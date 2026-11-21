@@ -94,6 +94,52 @@ public static class InfrastructureServiceCollectionExtensions
                 break;
         }
 
+        var payoutProvider = configuration["Integrations:PayoutProvider"] ?? "fake";
+        switch (payoutProvider.ToLowerInvariant())
+        {
+            case "paystack":
+                services.AddSingleton<IPayoutProvider, PaystackTransferProvider>();
+                break;
+            case "bankfile":
+                services.AddSingleton<BankBulkFilePayoutProvider>();
+                services.AddSingleton<IPayoutProvider>(sp => sp.GetRequiredService<BankBulkFilePayoutProvider>());
+                break;
+            default:
+                services.AddSingleton<FakePayoutProvider>();
+                services.AddSingleton<IPayoutProvider>(sp => sp.GetRequiredService<FakePayoutProvider>());
+                break;
+        }
+
+        // Notification channels (Sprint 8): fakes by default; Integrations:WhatsApp=bsp, Integrations:Email=smtp, Integrations:Push=fcm.
+        services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
+        services.AddSingleton<FakeMessageChannels>();
+        if (string.Equals(configuration["Integrations:WhatsApp"], "bsp", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddSingleton<IWhatsAppSender, BspWhatsAppSender>();
+        }
+        else
+        {
+            services.AddSingleton<IWhatsAppSender>(sp => sp.GetRequiredService<FakeMessageChannels>());
+        }
+
+        if (string.Equals(configuration["Integrations:Email"], "smtp", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddSingleton<IEmailSender, SmtpEmailSender>();
+        }
+        else
+        {
+            services.AddSingleton<IEmailSender>(sp => sp.GetRequiredService<FakeMessageChannels>());
+        }
+
+        if (string.Equals(configuration["Integrations:Push"], "fcm", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddSingleton<IPushSender, FcmPushSender>();
+        }
+        else
+        {
+            services.AddSingleton<IPushSender>(sp => sp.GetRequiredService<FakeMessageChannels>());
+        }
+
         // Security primitives (column encryption, password hashing) and outbound SMS.
         services.AddSingleton<IFieldEncryptor, AesGcmFieldEncryptor>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();

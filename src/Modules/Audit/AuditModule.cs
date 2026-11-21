@@ -8,6 +8,8 @@ using Plastoids.Infrastructure.Behaviours;
 using Plastoids.Infrastructure.Messaging.Kafka;
 using Plastoids.Infrastructure.Modules;
 using Plastoids.Modules.Audit.Consumers;
+using Plastoids.Modules.Audit.Contracts;
+using Plastoids.Modules.Audit.Services;
 using Plastoids.Modules.Audit.Features.Admin.ListAuditEvents;
 using Plastoids.Modules.Audit.Persistence;
 
@@ -24,6 +26,7 @@ public sealed class AuditModule : IModule
 
     public void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
+        services.AddScoped<IAuditLogReader, AuditLogReader>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)

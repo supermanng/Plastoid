@@ -169,5 +169,38 @@ public sealed class User : Entity, ISoftDeletable
         DeletedAt = utcNow;
     }
 
+    /// <summary>Back office (blueprint §9.20): a suspended account cannot sign in or refresh; the reason lives in the audit trail.</summary>
+    public Result Suspend(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return Error.Validation("reason_required", "A reason is required to suspend an account.");
+        }
+
+        if (Status == UserStatus.Deleted)
+        {
+            return Error.Conflict("user_deleted", "A deleted account cannot be suspended.");
+        }
+
+        if (Status == UserStatus.Suspended)
+        {
+            return Error.Conflict("user_already_suspended", "The account is already suspended.");
+        }
+
+        Status = UserStatus.Suspended;
+        return Result.Success();
+    }
+
+    public Result Reinstate()
+    {
+        if (Status != UserStatus.Suspended)
+        {
+            return Error.Conflict("user_not_suspended", "Only suspended accounts can be reinstated.");
+        }
+
+        Status = UserStatus.Active;
+        return Result.Success();
+    }
+
     public bool IsActive => Status == UserStatus.Active;
 }

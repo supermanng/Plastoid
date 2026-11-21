@@ -6,8 +6,10 @@ using Plastoids.Infrastructure.Http;
 using Plastoids.Infrastructure.Observability;
 using Plastoids.Infrastructure.Security;
 using Plastoids.Infrastructure.Persistence;
+using Microsoft.AspNetCore.HttpOverrides;
 using Plastoids.Modules.Applications;
 using Plastoids.Modules.Audit;
+using Plastoids.Modules.BackOffice;
 using Plastoids.Modules.Booking;
 using Plastoids.Modules.Catalogue;
 using Plastoids.Modules.Certificates;
@@ -15,6 +17,8 @@ using Plastoids.Modules.Lms;
 using Plastoids.Modules.Identity;
 using Plastoids.Modules.Ledger;
 using Plastoids.Modules.Payments;
+using Plastoids.Modules.Notifications;
+using Plastoids.Modules.Payouts;
 using Plastoids.Modules.Sponsorship;
 using Plastoids.Modules.Tutors;
 using Serilog;
@@ -42,13 +46,19 @@ services.AddModule<LmsModule>(configuration);
 services.AddModule<CertificatesModule>(configuration);
 services.AddModule<SponsorshipModule>(configuration);
 services.AddModule<ApplicationsModule>(configuration);
+services.AddModule<PayoutsModule>(configuration);
+services.AddModule<NotificationsModule>(configuration);
+services.AddModule<BackOfficeModule>(configuration);
 
 // Enums travel as camelCase strings on the wire ("monday", "selfPaced"), per blueprint §17 JSON conventions.
 services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase)));
 
 services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
 {
-    ctx.ProblemDetails.Extensions["correlationId"] = ctx.HttpContext.Response.Headers[CorrelationIdMiddleware.HeaderName].ToString();
+    // The exception handler clears the response, so the id is read back from the request (the middleware copies it there).
+    var correlationId = ctx.HttpContext.Request.Headers[CorrelationIdMiddleware.HeaderName].ToString();
+    ctx.HttpContext.Response.Headers[CorrelationIdMiddleware.HeaderName] = correlationId;
+    ctx.ProblemDetails.Extensions["correlationId"] = correlationId;
 });
 services.AddExceptionHandler<GlobalExceptionHandler>();
 services.AddOpenApi("v1");
@@ -76,6 +86,46 @@ if (args.Length > 0 && args[0] == "migrate")
     await Migrator.MigrateAllAsync(app.Services);
     Log.Information("Migrations applied.");
     return;
+}
+
+// Behind a load balancer the rate limiters and the admin IP allow-list must see the client, not the proxy (Hosting:KnownProxies / KnownNetworks).
+var forwarded = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto, ForwardLimit = 2 };
+forwarded.KnownNetworks.Clear();
+forwarded.KnownProxies.Clear();
+foreach (var proxy in configuration.GetSection("Hosting:KnownProxies").Get<string[]>() ?? [])
+{
+    if (System.Net.IPAddress.TryParse(proxy, out var address))
+    {
+        forwarded.KnownProxies.Add(address);
+    }
+}
+
+foreach (var network in configuration.GetSection("Hosting:KnownNetworks").Get<string[]>() ?? [])
+{
+    var parts = network.Split('/');
+    if (parts.Length == 2 && System.Net.IPAddress.TryParse(parts[0], out var prefix) && int.TryParse(parts[1], out var length))
+    {
+        forwarded.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(prefix, length));
+    }
+}
+
+if (forwarded.KnownProxies.Count > 0 || forwarded.KnownNetworks.Count > 0)
+{
+    // With both lists empty ASP.NET Core would trust every proxy, so the middleware is only added when proxies are named.
+    app.UseForwardedHeaders(forwarded);
+}
+
+// Production never runs on fakes: every integration must name a real adapter (secrets are validated by the adapters themselves).
+if (app.Environment.IsProduction())
+{
+    string[] integrationKeys = ["Integrations:PaymentGateway", "Integrations:PayoutProvider", "Integrations:Kyc", "Integrations:BankResolver", "Integrations:Video", "Integrations:LiveVideo", "Integrations:Calendar", "Integrations:Email", "Sms:Provider"];
+    var fakes = integrationKeys
+        .Where(key => string.IsNullOrWhiteSpace(configuration[key]) || string.Equals(configuration[key], "fake", StringComparison.OrdinalIgnoreCase))
+        .ToList();
+    if (fakes.Count > 0)
+    {
+        throw new InvalidOperationException("Production cannot start with fake integrations: " + string.Join(", ", fakes));
+    }
 }
 
 app.UseMiddleware<CorrelationIdMiddleware>();
@@ -106,12 +156,20 @@ app.MapHealthChecks("/health/ready", new()
 });
 
 var v1 = app.MapGroup("/api/v1");
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+{
+    // Proves the problem-details path for unhandled exceptions (Sprint 9 security pass); never mapped in staging or production.
+    v1.MapGet("/diagnostics/throw", DiagnosticsThrow)
+        .WithName("DiagnosticsThrow").ExcludeFromDescription().AllowAnonymous();
+}
 foreach (var module in app.Services.GetServices<Plastoids.Infrastructure.Modules.IModule>())
 {
     module.MapEndpoints(v1);
 }
 
 await app.RunAsync();
+
+static IResult DiagnosticsThrow() => throw new InvalidOperationException("Diagnostics: deliberate failure");
 
 namespace Plastoids.Api
 {
@@ -155,6 +213,7 @@ namespace Plastoids.Api
 
             logger.LogError(exception, "Unhandled exception → {Status} {Code}", status, code);
             httpContext.Response.StatusCode = status;
+            httpContext.Response.Headers[CorrelationIdMiddleware.HeaderName] = httpContext.Request.Headers[CorrelationIdMiddleware.HeaderName].ToString();
             await httpContext.Response.WriteAsJsonAsync(new
             {
                 type = $"https://docs.plastoids.ng/errors/{code}",
@@ -162,7 +221,7 @@ namespace Plastoids.Api
                 status,
                 detail,
                 code,
-                correlationId = httpContext.Response.Headers[CorrelationIdMiddleware.HeaderName].ToString(),
+                correlationId = httpContext.Request.Headers[CorrelationIdMiddleware.HeaderName].ToString(),
             }, cancellationToken);
             return true;
         }

@@ -59,6 +59,7 @@ public sealed class LmsModule : IModule
         // Replaces Catalogue's stub: reviews now need a real enrolment with ≥30 % progress.
         services.AddScoped<IEnrolmentProgress, LmsEnrolmentProgress>();
         services.AddScoped<IAssessmentGrader, AssessmentGrader>();
+        services.AddScoped<ICohortMembers, CohortMembers>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)

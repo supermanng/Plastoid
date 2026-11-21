@@ -105,6 +105,48 @@ saves a draft), sit the timed entry assessment (`POST`/`PUT /applications/{id}/a
 `/admin/applications/*` (blind queue, scoring, bulk decisions, offers, appeals); the sponsor approves the shortlist.
 Funnel (`…/funnel`, `?format=csv`), budget and the PDF impact report sit on the programme. See `docs/adr/0012`.
 
+## Payouts (Sprint 7)
+
+Earnings arrive from events (course sales hold 7 days, sessions wait for Booking's 72-hour release, sponsored months are
+payable at once); `GET /payouts/me` shows gross, commission, net, held, available, pending and paid and
+`GET /payouts/me/statement` exports CSV. Staff see the queue at `GET /admin/payouts/queue`, draft a batch with
+`POST /admin/payouts/batches` (or the Thursday job does), a different staff member approves it (`…/approve`,
+maker–checker enforced in the domain), `…/submit` sends it to the payout provider (`Integrations:PayoutProvider`:
+fake, paystack, bankfile) and `POST /payouts/webhooks/{provider}` settles (entry 4), fails or reverses it. Dispute holds:
+`POST /admin/payouts/holds` and `…/release`. A reconciliation shortfall freezes payouts until
+`POST /admin/ledger/reconciliation/unfreeze`. See `docs/adr/0013`.
+
+## Notifications (Sprint 8)
+
+Every module raises `notifications.send-requested.v1` with a template key; Notifications also consumes the domain
+events that imply a message and dedupes the two. Each message is an in-app inbox item (`GET /notifications/me`,
+`POST /notifications/{id}/read`) plus one delivery on the user's first available channel (push → WhatsApp → SMS →
+email; `PUT /notifications/preferences` sets order, opt-outs and quiet hours in local time, inside which deliveries
+are deferred). Staff manage approved template versions under `/admin/notifications/templates`; built-in copy is the
+fallback. Tutors announce to cohorts (`POST /notifications/cohorts/{id}/announcements`); learner–tutor threads
+(`/notifications/threads`) stay on platform and are flagged when they share phone numbers or solicit off-platform
+payment. Locally email goes to Mailpit (http://localhost:8025) when `Integrations:Email=smtp`. See `docs/adr/0014`.
+
+## Back office (Sprint 8)
+
+Staff work from `/admin/backoffice/*` (staff role + MFA + IP allow-list): `GET …/dashboard` reads GMV, net revenue,
+participants, programme health, the payout queue and risk alerts from the ledger and event-derived counters (never
+recomputed on screen); `…/users` (search, suspend, reinstate), `…/tutors`, `…/sponsors`; queues for verification, course
+moderation, refunds, disputes and NDPA data requests (views that point at the deciding endpoint); `…/feature-flags`;
+`…/audit-log` (cursor-paged, filtered); `…/risk-alerts/{id}/resolve`. Four-eyes actions: fee rules
+(`/admin/payments/fee-rules`, versioned with effective-from), role grants (`/admin/identity/role-grants`), refunds above
+₦100,000. See `docs/adr/0015`.
+
+## Hardening and definition of done (Sprint 9)
+
+`tests/Plastoids.IntegrationTests/DefinitionOfDoneTests.cs` runs the whole MVP flow (sponsor → campaign → applications →
+selection → enrolment → live attendance → assessment → certificate → payout → sponsor report) and checks the ledger
+reconciles with zero breaks. Security: dependency audit and secrets scan in CI, PII masked in logs
+(`PiiDestructuringPolicy`), problem details without stack traces, HMAC on every webhook, `/auth/*` rate limits,
+forwarded-headers support (`Hosting:KnownProxies`), and a production guard against fake integrations. Operations:
+`docs/runbooks/`. Traceability: `docs/mvp-traceability.md`. Load test: `perf/` (k6) with results to be recorded in
+`docs/perf.md`. See `docs/adr/0016`.
+
 ## Layout
 
 ```

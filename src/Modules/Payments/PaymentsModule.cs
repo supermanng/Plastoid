@@ -17,6 +17,7 @@ using Plastoids.Modules.Payments.Features.Invoices.CreateInvoice;
 using Plastoids.Modules.Payments.Features.Invoices.GetInvoice;
 using Plastoids.Modules.Payments.Features.Refunds.ApproveRefund;
 using Plastoids.Modules.Payments.Features.Refunds.IssueRefund;
+using Plastoids.Modules.Payments.Features.Admin.FeeRules;
 using Plastoids.Modules.Payments.Features.Settlement.ImportSettlements;
 using Plastoids.Modules.Payments.Features.Settlement.SweepEarnedRevenue;
 using Plastoids.Modules.Payments.Jobs;
@@ -44,7 +45,8 @@ public sealed class PaymentsModule : IModule
     {
         services.Configure<FeeOptions>(configuration.GetSection(FeeOptions.SectionName));
         services.Configure<PaymentOptions>(configuration.GetSection(PaymentOptions.SectionName));
-        services.AddSingleton<IFeeRules, FeeRules>();
+        services.AddScoped<IFeeRules, FeeRules>();
+        services.AddScoped<IPaymentsAdminQueues, PaymentsAdminQueues>();
         services.AddScoped<PaymentProcessing>();
         services.AddScoped<RefundIssuer>();
         services.AddScoped<IPaymentOperations, PaymentOperations>();
@@ -78,6 +80,7 @@ public sealed class PaymentsModule : IModule
         SweepEarnedRevenueEndpoint.Map(admin);
         IssueRefundEndpoint.Map(admin);
         ApproveRefundEndpoint.Map(admin);
+        FeeRuleEndpoints.Map(admin);
     }
 
     public IEnumerable<ConsumerRegistration> Consumers() => [];

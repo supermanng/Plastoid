@@ -460,6 +460,88 @@ namespace Plastoids.Modules.Identity.Persistence.Migrations
                     b.ToTable("identity_refresh_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("Plastoids.Modules.Identity.Domain.RoleGrantProposal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DecidedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("decided_at");
+
+                    b.Property<Guid?>("DecidedBy")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("decided_by");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("decision_note");
+
+                    b.Property<DateTime>("ProposedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("proposed_at");
+
+                    b.Property<Guid>("ProposedBy")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("proposed_by");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("role");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_identity_role_grants");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_identity_role_grants_status");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_identity_role_grants_tenant_id");
+
+                    b.HasIndex("UserId", "Role", "Status")
+                        .HasDatabaseName("ix_identity_role_grants_user_id_role_status");
+
+                    b.ToTable("identity_role_grants", (string)null);
+                });
+
             modelBuilder.Entity("Plastoids.Modules.Identity.Domain.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
