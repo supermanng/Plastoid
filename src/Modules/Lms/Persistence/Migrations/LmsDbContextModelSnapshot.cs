@@ -112,6 +112,189 @@ namespace Plastoids.Modules.Lms.Persistence.Migrations
                     b.ToTable("lms_outbox", (string)null);
                 });
 
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.AssignmentSubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BlobKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)")
+                        .HasColumnName("blob_key");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EnrolmentId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("enrolment_id");
+
+                    b.Property<string>("Feedback")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)")
+                        .HasColumnName("feedback");
+
+                    b.Property<DateTime?>("GradedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("graded_at");
+
+                    b.Property<Guid?>("GradedBy")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("graded_by");
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("lesson_id");
+
+                    b.Property<decimal?>("MaxScore")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)")
+                        .HasColumnName("max_score");
+
+                    b.Property<bool>("Passed")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("passed");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("RubricJson")
+                        .HasColumnType("json")
+                        .HasColumnName("rubric_json");
+
+                    b.Property<decimal?>("Score")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)")
+                        .HasColumnName("score");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lms_assignment_submissions");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_lms_assignment_submissions_tenant_id");
+
+                    b.HasIndex("EnrolmentId", "LessonId")
+                        .HasDatabaseName("ix_lms_assignment_submissions_enrolment_id_lesson_id");
+
+                    b.ToTable("lms_assignment_submissions", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.Attempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AnswersJson")
+                        .IsRequired()
+                        .HasColumnType("json")
+                        .HasColumnName("answers_json");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("DeadlineAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deadline_at");
+
+                    b.Property<Guid>("EnrolmentId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("enrolment_id");
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("lesson_id");
+
+                    b.Property<decimal>("MaxScore")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)")
+                        .HasColumnName("max_score");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int")
+                        .HasColumnName("number");
+
+                    b.Property<bool>("Passed")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("passed");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<decimal>("Score")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)")
+                        .HasColumnName("score");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lms_attempts");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_lms_attempts_tenant_id");
+
+                    b.HasIndex("EnrolmentId", "LessonId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_lms_attempts_enrolment_id_lesson_id_number");
+
+                    b.ToTable("lms_attempts", (string)null);
+                });
+
             modelBuilder.Entity("Plastoids.Modules.Lms.Domain.AttendanceEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -176,6 +359,403 @@ namespace Plastoids.Modules.Lms.Persistence.Migrations
                         .HasDatabaseName("ix_lms_attendance_events_live_session_id_user_id");
 
                     b.ToTable("lms_attendance_events", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.Cohort", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("int")
+                        .HasColumnName("capacity");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("course_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("EndsAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("ends_at");
+
+                    b.Property<int>("Enrolled")
+                        .HasColumnType("int")
+                        .HasColumnName("enrolled");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("varchar(160)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("OfferingId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("offering_id");
+
+                    b.Property<Guid?>("ProgrammeId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("programme_id");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("starts_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TutorUserId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tutor_user_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lms_cohorts");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_lms_cohorts_tenant_id");
+
+                    b.HasIndex("TutorUserId")
+                        .HasDatabaseName("ix_lms_cohorts_tutor_user_id");
+
+                    b.HasIndex("OfferingId", "StartsAt")
+                        .HasDatabaseName("ix_lms_cohorts_offering_id_starts_at");
+
+                    b.ToTable("lms_cohorts", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.Enrolment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("CohortId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("cohort_id");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("completed_at");
+
+                    b.Property<int>("CompletedLessons")
+                        .HasColumnType("int")
+                        .HasColumnName("completed_lessons");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("course_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("expires_at");
+
+                    b.Property<decimal?>("FinalScore")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)")
+                        .HasColumnName("final_score");
+
+                    b.Property<string>("FundingSource")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("funding_source");
+
+                    b.Property<Guid?>("FundingSourceId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("funding_source_id");
+
+                    b.Property<Guid>("LearnerId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("learner_id");
+
+                    b.Property<Guid>("OfferingId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("offering_id");
+
+                    b.Property<decimal>("ProgressPct")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)")
+                        .HasColumnName("progress_pct");
+
+                    b.Property<int>("RequiredLessons")
+                        .HasColumnType("int")
+                        .HasColumnName("required_lessons");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("SourceKey")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("source_key");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("VersionNo")
+                        .HasColumnType("int")
+                        .HasColumnName("version_no");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lms_enrolments");
+
+                    b.HasIndex("CohortId")
+                        .HasDatabaseName("ix_lms_enrolments_cohort_id");
+
+                    b.HasIndex("SourceKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_lms_enrolments_source_key");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_lms_enrolments_tenant_id");
+
+                    b.HasIndex("CourseId", "Status")
+                        .HasDatabaseName("ix_lms_enrolments_course_id_status");
+
+                    b.HasIndex("LearnerId", "CourseId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_lms_enrolments_learner_id_course_id");
+
+                    b.ToTable("lms_enrolments", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.ForumPost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("author_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)")
+                        .HasColumnName("body");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FlagReason")
+                        .HasMaxLength(48)
+                        .HasColumnType("varchar(48)")
+                        .HasColumnName("flag_reason");
+
+                    b.Property<DateTime?>("FlaggedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("flagged_at");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("thread_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lms_forum_posts");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_lms_forum_posts_tenant_id");
+
+                    b.HasIndex("ThreadId")
+                        .HasDatabaseName("ix_lms_forum_posts_thread_id");
+
+                    b.ToTable("lms_forum_posts", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.ForumThread", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("author_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)")
+                        .HasColumnName("body");
+
+                    b.Property<Guid>("CohortId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("cohort_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("LastActivityAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_activity_at");
+
+                    b.Property<int>("PostCount")
+                        .HasColumnType("int")
+                        .HasColumnName("post_count");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lms_forum_threads");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_lms_forum_threads_tenant_id");
+
+                    b.HasIndex("CohortId", "LastActivityAt")
+                        .HasDatabaseName("ix_lms_forum_threads_cohort_id_last_activity_at");
+
+                    b.ToTable("lms_forum_threads", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.LessonProgress", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ClientUpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("client_updated_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EnrolmentId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("enrolment_id");
+
+                    b.Property<DateTime>("LastSyncedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_synced_at");
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("lesson_id");
+
+                    b.Property<int>("Page")
+                        .HasColumnType("int")
+                        .HasColumnName("page");
+
+                    b.Property<decimal>("PercentComplete")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)")
+                        .HasColumnName("percent_complete");
+
+                    b.Property<int>("PositionSeconds")
+                        .HasColumnType("int")
+                        .HasColumnName("position_seconds");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lms_lesson_progress");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_lms_lesson_progress_tenant_id");
+
+                    b.HasIndex("EnrolmentId", "LessonId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_lms_lesson_progress_enrolment_id_lesson_id");
+
+                    b.ToTable("lms_lesson_progress", (string)null);
                 });
 
             modelBuilder.Entity("Plastoids.Modules.Lms.Domain.LiveSession", b =>
@@ -275,6 +855,9 @@ namespace Plastoids.Modules.Lms.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_lms_live_sessions_booking_id");
 
+                    b.HasIndex("CohortId")
+                        .HasDatabaseName("ix_lms_live_sessions_cohort_id");
+
                     b.HasIndex("RoomId")
                         .IsUnique()
                         .HasDatabaseName("ix_lms_live_sessions_room_id");
@@ -291,6 +874,153 @@ namespace Plastoids.Modules.Lms.Persistence.Migrations
                     b.ToTable("lms_live_sessions", (string)null);
                 });
 
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.OfflinePackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EnrolmentId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("enrolment_id");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("issued_at");
+
+                    b.Property<string>("KeyCiphertext")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)")
+                        .HasColumnName("key_ciphertext");
+
+                    b.Property<Guid>("LearnerId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("learner_id");
+
+                    b.Property<int>("LessonCount")
+                        .HasColumnType("int")
+                        .HasColumnName("lesson_count");
+
+                    b.Property<string>("ManifestJson")
+                        .IsRequired()
+                        .HasColumnType("json")
+                        .HasColumnName("manifest_json");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lms_offline_packages");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_lms_offline_packages_tenant_id");
+
+                    b.HasIndex("EnrolmentId", "IssuedAt")
+                        .HasDatabaseName("ix_lms_offline_packages_enrolment_id_issued_at");
+
+                    b.ToTable("lms_offline_packages", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.PublishedCourseRef", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("course_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("OfferingIds")
+                        .IsRequired()
+                        .HasColumnType("json")
+                        .HasColumnName("offering_ids_json");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("owner_user_id");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)")
+                        .HasColumnName("slug");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("VersionNo")
+                        .HasColumnType("int")
+                        .HasColumnName("version_no");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lms_published_courses");
+
+                    b.HasIndex("CourseId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_lms_published_courses_course_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_lms_published_courses_tenant_id");
+
+                    b.ToTable("lms_published_courses", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.AssignmentSubmission", b =>
+                {
+                    b.HasOne("Plastoids.Modules.Lms.Domain.Enrolment", null)
+                        .WithMany()
+                        .HasForeignKey("EnrolmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lms_assignment_submissions_lms_enrolments_enrolment_id");
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.Attempt", b =>
+                {
+                    b.HasOne("Plastoids.Modules.Lms.Domain.Enrolment", null)
+                        .WithMany()
+                        .HasForeignKey("EnrolmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lms_attempts_lms_enrolments_enrolment_id");
+                });
+
             modelBuilder.Entity("Plastoids.Modules.Lms.Domain.AttendanceEvent", b =>
                 {
                     b.HasOne("Plastoids.Modules.Lms.Domain.LiveSession", null)
@@ -299,6 +1029,36 @@ namespace Plastoids.Modules.Lms.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_lms_attendance_events_lms_live_sessions_live_session_id");
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.ForumPost", b =>
+                {
+                    b.HasOne("Plastoids.Modules.Lms.Domain.ForumThread", null)
+                        .WithMany()
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lms_forum_posts_lms_forum_threads_thread_id");
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.LessonProgress", b =>
+                {
+                    b.HasOne("Plastoids.Modules.Lms.Domain.Enrolment", null)
+                        .WithMany()
+                        .HasForeignKey("EnrolmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lms_lesson_progress_lms_enrolments_enrolment_id");
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Lms.Domain.OfflinePackage", b =>
+                {
+                    b.HasOne("Plastoids.Modules.Lms.Domain.Enrolment", null)
+                        .WithMany()
+                        .HasForeignKey("EnrolmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lms_offline_packages_lms_enrolments_enrolment_id");
                 });
 #pragma warning restore 612, 618
         }

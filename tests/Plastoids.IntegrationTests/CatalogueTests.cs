@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Plastoids.Infrastructure.Integrations;
 using Plastoids.Infrastructure.Tenancy;
-using Plastoids.Modules.Catalogue.Contracts;
 using Plastoids.Modules.Catalogue.Persistence;
 using Plastoids.Modules.Catalogue.Services;
 using Plastoids.SharedKernel.Tenancy;
@@ -156,14 +155,13 @@ public class CatalogueTests(PlastoidsApiFactory factory)
         compare.GetProperty("courses").GetArrayLength().Should().Be(1);
         compare.GetProperty("courses")[0].GetProperty("lessonCount").GetInt32().Should().Be(2);
 
-        // Review gate: needs a verified enrolment with ≥30% progress (Lms stub).
-        var (learner, learnerSignIn) = await factory.SignInWithPhoneAsync(NewPhone(), "Reviewer");
-        var enrolmentId = Guid.CreateVersion7();
-        var gate = factory.Services.GetRequiredService<StubEnrolmentProgress>();
-        (await learner.PostAsJsonAsync($"/api/v1/catalogue/courses/{courseId}/reviews", new { enrolmentId, rating = 5, body = "Clear and practical." })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        gate.Snapshots[enrolmentId] = new EnrolmentProgressSnapshot(enrolmentId, learnerSignIn.UserId, courseId, 10m, true);
+        // Review gate (real since Sprint 5): a paid enrolment with <30 % progress is refused, ≥30 % passes.
+        var (learner, _) = await factory.SignInWithPhoneAsync(NewPhone(), "Reviewer");
+        (await learner.PostAsJsonAsync($"/api/v1/catalogue/courses/{courseId}/reviews", new { enrolmentId = Guid.CreateVersion7(), rating = 5, body = "Clear and practical." })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var enrolmentId = await LearningAndCertificatesTests.EnrolByPaymentAsync(factory, learner, slug);
         (await learner.PostAsJsonAsync($"/api/v1/catalogue/courses/{courseId}/reviews", new { enrolmentId, rating = 5, body = "Clear and practical." })).StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
-        gate.Snapshots[enrolmentId] = new EnrolmentProgressSnapshot(enrolmentId, learnerSignIn.UserId, courseId, 45m, true);
+        var progress = await learner.PostAsJsonAsync($"/api/v1/lms/enrolments/{enrolmentId}/progress", new { items = new object[] { new { lessonId, status = "completed", positionSeconds = 700, page = 0, percentComplete = 100, clientUpdatedAt = DateTime.UtcNow } } });
+        progress.StatusCode.Should().Be(HttpStatusCode.OK, await progress.Content.ReadAsStringAsync());
         var review = await learner.PostAsJsonAsync($"/api/v1/catalogue/courses/{courseId}/reviews", new { enrolmentId, rating = 5, body = "Clear and practical." });
         review.StatusCode.Should().Be(HttpStatusCode.Created, await review.Content.ReadAsStringAsync());
         (await review.Content.ReadFromJsonAsync<JsonElement>(Json)).GetProperty("courseRatingAverage").GetDecimal().Should().Be(5m);

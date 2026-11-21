@@ -83,6 +83,16 @@ from 15 minutes before the start. `POST /bookings/{id}/cancel` applies the §9 r
 `/reschedule` moves the session. Provider attendance arrives at `POST /lms/webhooks/live/{provider}` (signed with
 `Secrets:LiveVideoWebhookSecret`). Reminders, completion and 72-hour earning holds run from Quartz. See `docs/adr/0010`.
 
+## Learning and certificates (Sprint 5)
+
+Paying for a course (or accepting a sponsored offer) enrols the learner automatically; `GET /lms/enrolments/me` lists
+courses, `GET /lms/enrolments/{id}/lessons/{lessonId}` serves content, `POST /lms/enrolments/{id}/progress` syncs an
+offline batch, quizzes run through `POST …/lessons/{lessonId}/attempts` → `PUT /lms/attempts/{id}/answers` →
+`POST /lms/attempts/{id}/submit` with server-side timing, assignments through `…/assignment` and
+`POST /lms/submissions/{id}/grade`. Completion issues a certificate; `GET /verify/{code}` is public and
+`POST /admin/certificates/{id}/revoke` keeps the record. Cohorts: `POST /lms/cohorts`, `…/sessions`, `…/threads`.
+See `docs/adr/0011`.
+
 ## Layout
 
 ```
