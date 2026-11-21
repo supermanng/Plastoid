@@ -785,6 +785,12 @@ namespace Plastoids.Modules.Payments.Persistence.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("Destination")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)")
+                        .HasColumnName("destination");
+
                     b.Property<string>("GatewayReference")
                         .HasMaxLength(120)
                         .HasColumnType("varchar(120)")
@@ -794,6 +800,10 @@ namespace Plastoids.Modules.Payments.Persistence.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("issued_at");
 
+                    b.Property<Guid?>("LearnerId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("learner_id");
+
                     b.Property<Guid?>("LedgerEntryId")
                         .HasColumnType("binary(16)")
                         .HasColumnName("ledger_entry_id");
@@ -801,6 +811,10 @@ namespace Plastoids.Modules.Payments.Persistence.Migrations
                     b.Property<Guid>("PaymentIntentId")
                         .HasColumnType("binary(16)")
                         .HasColumnName("payment_intent_id");
+
+                    b.Property<bool>("PolicyDriven")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("policy_driven");
 
                     b.Property<string>("Reason")
                         .IsRequired()

@@ -76,6 +76,7 @@ public static class InfrastructureServiceCollectionExtensions
         AddIntegration<IBankAccountResolver, FakeBankAccountResolver, PaystackBankAccountResolver>(services, configuration, "BankResolver", "paystack");
         AddIntegration<ICalendarProvider, FakeCalendarProvider, GoogleCalendarProvider>(services, configuration, "Calendar", "google");
         AddIntegration<IVideoProvider, FakeVideoProvider, MuxVideoProvider>(services, configuration, "Video", "mux");
+        AddIntegration<ILiveVideoProvider, FakeLiveVideoProvider, DailyLiveVideoProvider>(services, configuration, "LiveVideo", "daily");
         AddIntegration<IGatewaySettlementReport, FakeGatewaySettlementReport, FakeGatewaySettlementReport>(services, configuration, "SettlementReport", "none");
         AddIntegration<IBankStatement, FakeBankStatement, FakeBankStatement>(services, configuration, "BankStatement", "none");
         var gateway = configuration["Integrations:PaymentGateway"] ?? "fake";

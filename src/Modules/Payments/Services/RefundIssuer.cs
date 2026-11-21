@@ -14,10 +14,18 @@ internal sealed class RefundIssuer(PaymentsDbContext db, IPaymentGateway gateway
 {
     public async Task<Result> IssueAsync(PaymentIntent intent, Refund refund, CancellationToken ct)
     {
-        var gatewayRef = await gateway.RefundAsync(intent.GatewayReference, refund.Amount, refund.Reason, ct);
-        if (gatewayRef.IsFailure)
+        Result<string> gatewayRef;
+        if (refund.Destination == RefundDestinations.Credit)
         {
-            return gatewayRef.Error;
+            gatewayRef = "credit:" + refund.Id.ToString("N"); // no gateway call: the money stays in client funds as learner credit
+        }
+        else
+        {
+            gatewayRef = await gateway.RefundAsync(intent.GatewayReference, refund.Amount, refund.Reason, ct);
+            if (gatewayRef.IsFailure)
+            {
+                return gatewayRef.Error;
+            }
         }
 
         var now = clock.UtcNow;

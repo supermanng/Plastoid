@@ -43,7 +43,7 @@ public class CatalogueTests(PlastoidsApiFactory factory)
         return (tutor, userId, slug, courseId);
     }
 
-    private static async Task<(HttpClient Tutor, Guid UserId, Guid TutorId)> VerifiedTutorAsync(PlastoidsApiFactory factory)
+    internal static async Task<(HttpClient Tutor, Guid UserId, Guid TutorId)> VerifiedTutorAsync(PlastoidsApiFactory factory)
     {
         var (tutor, userId, tutorId) = await TutorOnboardingTests.ApplyAsTutorAsync(factory, "Course author");
         await tutor.PostAsJsonAsync("/api/v1/tutors/me/identity-check", new { nin = "12345678901", bvn = "22345678901", selfieBlobKey = "s.jpg", fullName = "Course Author" });

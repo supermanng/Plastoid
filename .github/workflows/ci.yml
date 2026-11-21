@@ -32,6 +32,7 @@ jobs:
           dotnet test tests/Plastoids.Modules.Identity.Tests -c Release --no-build --logger "trx;LogFileName=identity.trx" --collect:"XPlat Code Coverage"
           dotnet test tests/Plastoids.Modules.Marketplace.Tests -c Release --no-build --logger "trx;LogFileName=marketplace.trx" --collect:"XPlat Code Coverage"
           dotnet test tests/Plastoids.Modules.Money.Tests -c Release --no-build --logger "trx;LogFileName=money.trx" --collect:"XPlat Code Coverage"
+          dotnet test tests/Plastoids.Modules.Sessions.Tests -c Release --no-build --logger "trx;LogFileName=sessions.trx" --collect:"XPlat Code Coverage"
 
       - name: Integration tests (Testcontainers)
         run: dotnet test tests/Plastoids.IntegrationTests -c Release --no-build --logger "trx;LogFileName=integration.trx"

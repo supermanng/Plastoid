@@ -76,7 +76,10 @@ internal static class PaymentPostings
             }
         }
 
-        postings.Add(PostingDraft.Cr(intent.SettledAt is null ? AccountCodes.GatewayReceivable : AccountCodes.BankClientFunds, refund.Amount));
+        // Credit refunds keep the cash: the learner's balance (2030) is the new liability. Card refunds leave client funds (or the receivable before settlement).
+        postings.Add(refund.Destination == RefundDestinations.Credit
+            ? PostingDraft.Cr(AccountCodes.LearnerRefundCredit, refund.Amount, SubLedgerOwnerTypes.Learner, refund.LearnerId ?? intent.PayerId)
+            : PostingDraft.Cr(intent.SettledAt is null ? AccountCodes.GatewayReceivable : AccountCodes.BankClientFunds, refund.Amount));
         return new JournalEntryDraft($"refund:{refund.Id:N}", "refund", $"Refund of {intent.GatewayReference}: {refund.Reason}", postings, occurredAt);
     }
 

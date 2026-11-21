@@ -11,6 +11,8 @@
     <ProjectReference Include="../Modules/Catalogue/Plastoids.Modules.Catalogue.csproj" />
     <ProjectReference Include="../Modules/Ledger/Plastoids.Modules.Ledger.csproj" />
     <ProjectReference Include="../Modules/Payments/Plastoids.Modules.Payments.csproj" />
+    <ProjectReference Include="../Modules/Booking/Plastoids.Modules.Booking.csproj" />
+    <ProjectReference Include="../Modules/Lms/Plastoids.Modules.Lms.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />

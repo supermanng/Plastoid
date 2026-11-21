@@ -44,7 +44,9 @@ internal sealed class RefundConfiguration : IEntityTypeConfiguration<Refund>
     public void Configure(EntityTypeBuilder<Refund> b)
     {
         b.ToTable("payments_refunds");
+        b.Ignore(x => x.NeedsSecondApprover);
         b.Property(x => x.Reason).HasMaxLength(500);
+        b.Property(x => x.Destination).HasMaxLength(8);
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
         b.Property(x => x.GatewayReference).HasMaxLength(120);
         b.HasIndex(x => x.PaymentIntentId);

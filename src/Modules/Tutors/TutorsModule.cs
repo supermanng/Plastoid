@@ -42,6 +42,7 @@ public sealed class TutorsModule : IModule
     public void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<TutorAccess>();
+        services.AddScoped<ITutorSchedule, TutorSchedule>();
         services.AddQuartz(q =>
         {
             var key = new JobKey(ReviewSlaJob.JobName);

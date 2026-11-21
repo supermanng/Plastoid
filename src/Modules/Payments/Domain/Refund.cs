@@ -35,9 +35,20 @@ public sealed class Refund : Entity
     public Guid? LedgerEntryId { get; private set; }
 
     public static Refund Request(Guid tenantId, Guid paymentIntentId, Money amount, string reason, Guid requestedBy)
-        => new(NewId(), tenantId) { PaymentIntentId = paymentIntentId, Amount = amount, Reason = reason.Trim(), RequestedBy = requestedBy, Status = RefundStatus.PendingApproval };
+        => new(NewId(), tenantId) { PaymentIntentId = paymentIntentId, Amount = amount, Reason = reason.Trim(), RequestedBy = requestedBy, Status = RefundStatus.PendingApproval, Destination = "card" };
 
-    public bool NeedsSecondApprover => Amount > FourEyesThreshold;
+    /// <summary>Cancellation-policy refunds are approved by the rule itself (blueprint §9: refund rules applied automatically).</summary>
+    public static Refund ByPolicy(Guid tenantId, Guid paymentIntentId, Money amount, string reason, string destination, Guid? learnerId)
+        => new(NewId(), tenantId) { PaymentIntentId = paymentIntentId, Amount = amount, Reason = reason.Trim(), RequestedBy = Guid.Empty, ApprovedBy = Guid.Empty, Status = RefundStatus.PendingApproval, PolicyDriven = true, Destination = destination, LearnerId = learnerId };
+
+    /// <summary>"card" (gateway) or "credit" (learner refund credit, ledger 2030).</summary>
+    public string Destination { get; private set; } = "card";
+
+    public bool PolicyDriven { get; private set; }
+
+    public Guid? LearnerId { get; private set; }
+
+    public bool NeedsSecondApprover => !PolicyDriven && Amount > FourEyesThreshold;
 
     public Result Approve(Guid approverId)
     {

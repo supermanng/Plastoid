@@ -74,6 +74,15 @@ refunds (entry 5, four-eyes above ₦100,000) and read balances, journal entries
 webhook matches the invoice (entry 6). Locally the fake gateway signs webhooks with `Secrets:PaymentWebhookSecret`
 (default `fake-payment-webhook-secret`). See `docs/adr/0009`.
 
+## Bookings and live sessions (Sprint 4)
+
+`GET /bookings/quote` prices a slot, `POST /bookings/locks` holds it for 10 minutes, `POST /bookings` (Idempotency-Key)
+creates the booking with a checkout URL (or confirms at once from a `POST /bookings/packages` package). The payment
+webhook confirms it; Lms then creates the live session, and `POST /lms/live-sessions/{id}/join-token` opens the room
+from 15 minutes before the start. `POST /bookings/{id}/cancel` applies the §9 refund rules (credit by default) and
+`/reschedule` moves the session. Provider attendance arrives at `POST /lms/webhooks/live/{provider}` (signed with
+`Secrets:LiveVideoWebhookSecret`). Reminders, completion and 72-hour earning holds run from Quartz. See `docs/adr/0010`.
+
 ## Layout
 
 ```
