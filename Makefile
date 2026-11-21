@@ -1,4 +1,4 @@
-.PHONY: up down logs build test test-unit test-integration migrate seed run openapi format clean
+.PHONY: up down logs build test test-unit test-integration migrate seed run openapi format clean web web-install web-build web-lint
 
 API := src/Plastoids.Api/Plastoids.Api.csproj
 
@@ -43,6 +43,18 @@ run:           ## Run the API in Development (migrates on startup)
 
 openapi:       ## Export OpenAPI to artifacts/openapi.json (API must be running on :5080)
 	curl -sf http://localhost:5080/openapi/v1.json -o artifacts/openapi.json && echo "wrote artifacts/openapi.json"
+
+web-install:   ## Install frontend dependencies (frontend/)
+	npm ci --prefix frontend --no-audit --no-fund
+
+web:           ## Run the React frontend on :5173 (proxies /api to the API on :5080)
+	npm run dev --prefix frontend
+
+web-build:     ## Production build of the frontend to frontend/dist
+	npm run build --prefix frontend
+
+web-lint:      ## Lint the frontend
+	npm run lint --prefix frontend
 
 format:
 	dotnet format Plastoids.sln

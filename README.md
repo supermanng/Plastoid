@@ -12,6 +12,7 @@ make migrate     # apply EF migrations
 make run         # API on http://localhost:5080 (Development: migrates on startup, diagnostics enabled)
 make test-unit   # unit + architecture tests
 make test-integration   # Testcontainers: real MySQL, Kafka, Redis, S3Mock
+make web         # React web app on http://localhost:5173 (proxies /api to :5080); see frontend/README.md
 ```
 
 Integration tests start MySQL in a container by default. To use an existing MySQL server instead (the tests create and drop a
@@ -147,6 +148,14 @@ forwarded-headers support (`Hosting:KnownProxies`), and a production guard again
 `docs/runbooks/`. Traceability: `docs/mvp-traceability.md`. Load test: `perf/` (k6) with results to be recorded in
 `docs/perf.md`. See `docs/adr/0016`.
 
+## Web app (React)
+
+`frontend/` is a Vite + React 19 single-page app covering the public site, learner, tutor, sponsor and back-office areas
+against this API. `make web` runs it on :5173 with `/api` proxied to the API on :5080; `make web-build` produces
+`frontend/dist`, and `frontend/Dockerfile` serves it with nginx proxying `/api/` to the API container. Role gates mirror the
+API policies (tutor, sponsor and staff areas need an MFA-stepped-up token). Details, sign-in notes for development and
+the backend gaps the UI works around are in [frontend/README.md](frontend/README.md) and `docs/adr/0017`.
+
 ## Layout
 
 ```
@@ -155,6 +164,7 @@ src/Plastoids.SharedKernel    Result, Money, Entity, IClock, tenancy, CQRS marke
 src/Plastoids.Infrastructure  MySQL conventions, unit of work, outbox/inbox, Kafka, Quartz, behaviours
 src/Modules/<Module>          Domain · Persistence · Contracts · Features/<UseCase> · Consumers · Jobs
 tests/                        SharedKernel.Tests · ArchitectureTests · IntegrationTests
+frontend/                     React 19 + Vite web app (public site, learner, tutor, sponsor, back office); nginx image
 ```
 
 ## Adding a slice

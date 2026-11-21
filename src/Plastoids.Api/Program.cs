@@ -53,6 +53,18 @@ services.AddModule<BackOfficeModule>(configuration);
 // Enums travel as camelCase strings on the wire ("monday", "selfPaced"), per blueprint §17 JSON conventions.
 services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase)));
 
+// CORS is opt-in: the web app is served from the same origin (Vite proxy locally, nginx in Docker). Set Cors:AllowedOrigins
+// (e.g. ["https://app.plastoids.ng"]) only when the frontend is hosted on another origin.
+var corsOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+if (corsOrigins.Length > 0)
+{
+    services.AddCors(o => o.AddDefaultPolicy(p => p
+        .WithOrigins(corsOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .WithExposedHeaders(CorrelationIdMiddleware.HeaderName, "Content-Disposition")));
+}
+
 services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
 {
     // The exception handler clears the response, so the id is read back from the request (the middleware copies it there).
@@ -129,6 +141,10 @@ if (app.Environment.IsProduction())
 }
 
 app.UseMiddleware<CorrelationIdMiddleware>();
+if (corsOrigins.Length > 0)
+{
+    app.UseCors();
+}
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseSerilogRequestLogging();

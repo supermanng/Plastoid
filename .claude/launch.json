@@ -7,6 +7,12 @@
       "runtimeArgs": ["run", "--project", "src/Plastoids.Api", "--no-launch-profile"],
       "env": { "ASPNETCORE_ENVIRONMENT": "Development", "ASPNETCORE_URLS": "http://localhost:5080" },
       "port": 5080
+    },
+    {
+      "name": "plastoids-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "frontend", "--", "--port", "5173", "--strictPort"],
+      "port": 5173
     }
   ]
 }
