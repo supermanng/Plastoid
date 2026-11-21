@@ -14,6 +14,8 @@ public interface IUnitOfWork
 {
     bool IsActive { get; }
     ModuleDbContext? Primary { get; }
+    /// <summary>Every context sharing the transaction (primary first); the audit behaviour snapshots changes from all of them.</summary>
+    IReadOnlyList<DbContext> Enlisted { get; }
     Task BeginAsync(ModuleDbContext primary, CancellationToken cancellationToken);
     Task EnlistAsync(DbContext context, CancellationToken cancellationToken);
     Task CommitAsync(CancellationToken cancellationToken);
@@ -23,6 +25,8 @@ public interface IUnitOfWork
 internal sealed class UnitOfWork(IOutbox outbox, EnvelopeSerializer serializer) : IUnitOfWork, IAsyncDisposable
 {
     private readonly List<DbContext> _enlisted = [];
+
+    public IReadOnlyList<DbContext> Enlisted => _enlisted;
     private IDbContextTransaction? _transaction;
 
     public bool IsActive => _transaction is not null;

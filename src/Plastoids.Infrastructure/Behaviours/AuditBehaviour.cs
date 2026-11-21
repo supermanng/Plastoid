@@ -13,7 +13,7 @@ using Plastoids.SharedKernel.Tenancy;
 namespace Plastoids.Infrastructure.Behaviours;
 
 /// <summary>
-/// After a successful handler, snapshots Added/Modified/Deleted entities marked [Audited] from the primary
+/// After a successful handler, snapshots Added/Modified/Deleted entities marked [Audited] from every enlisted
 /// context and enqueues audit.event.v1 for each (consumed by the Audit module). Runs inside the unit of work.
 /// </summary>
 public sealed class AuditBehaviour<TRequest, TResponse>(IUnitOfWork unitOfWork, IOutbox outbox, ICurrentUser user)
@@ -29,8 +29,8 @@ public sealed class AuditBehaviour<TRequest, TResponse>(IUnitOfWork unitOfWork, 
             return response;
         }
 
-        var db = unitOfWork.Primary;
-        foreach (var entry in db.ChangeTracker.Entries<Entity>())
+        // Cross-module mutations (e.g. the back office suspending a user through Identity.Contracts) enlist other contexts: audit them all.
+        foreach (var entry in unitOfWork.Enlisted.SelectMany(db => db.ChangeTracker.Entries<Entity>()))
         {
             if (entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
             {

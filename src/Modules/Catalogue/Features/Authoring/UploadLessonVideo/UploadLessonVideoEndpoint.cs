@@ -42,6 +42,7 @@ internal static class UploadLessonVideoEndpoint
             })
             .WithName("VideoWebhook")
             .WithSummary("Video provider webhook (signature-verified, idempotent on uploadId).")
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .DisableRateLimiting(); // HMAC-verified; providers retry in bursts and must not be throttled with ordinary traffic
     }
 }

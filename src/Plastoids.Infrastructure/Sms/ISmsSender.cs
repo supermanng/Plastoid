@@ -36,7 +36,7 @@ public sealed class FakeSmsSender(ILogger<FakeSmsSender> logger, Plastoids.Share
     public Task SendAsync(string phoneE164, string message, CancellationToken cancellationToken)
     {
         _sent.Enqueue(new SentSms(phoneE164, message, clock.UtcNow));
-        logger.LogInformation("[fake-sms] to {Phone}: {Message}", phoneE164, message);
+        logger.LogInformation("[fake-sms] to {PhoneMasked}: {Message}", "***" + phoneE164[^Math.Min(4, phoneE164.Length)..], message);
         return Task.CompletedTask;
     }
 }

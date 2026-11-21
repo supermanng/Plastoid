@@ -74,7 +74,11 @@ internal sealed class HandleProviderAttendanceWebhookHandler(LmsDbContext db, IL
                 }
 
                 open.Leave(signal.At);
-                outbox.Enqueue(new AttendanceRecorded(session.Id, session.Id, null, open.UserId, session.BookingId, open.JoinedAt, open.LeftAt!.Value, open.DurationSeconds));
+                // Cohort sessions: the attendee's enrolment in that cohort (Sponsorship and Payouts key on it); 1:1 bookings have none.
+                Guid? enrolmentId = session.CohortId is { } cohortId
+                    ? await db.Enrolments.AsNoTracking().Where(e => e.CohortId == cohortId && e.LearnerId == open.UserId).Select(e => (Guid?)e.Id).FirstOrDefaultAsync(cancellationToken)
+                    : null;
+                outbox.Enqueue(new AttendanceRecorded(session.Id, session.Id, enrolmentId, open.UserId, session.BookingId, open.JoinedAt, open.LeftAt!.Value, open.DurationSeconds));
                 leaves++;
             }
             else
@@ -108,6 +112,7 @@ internal static class HandleProviderAttendanceWebhookEndpoint
             })
             .WithName("LiveAttendanceWebhook")
             .WithSummary("Video provider webhook (signature-verified): join/leave signals become attendance events.")
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .DisableRateLimiting(); // HMAC-verified; providers retry in bursts and must not be throttled with ordinary traffic
     }
 }

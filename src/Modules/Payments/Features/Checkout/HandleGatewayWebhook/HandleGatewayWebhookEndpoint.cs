@@ -32,6 +32,7 @@ internal static class HandleGatewayWebhookEndpoint
             })
             .WithName("PaymentGatewayWebhook")
             .WithSummary("Gateway webhook (HMAC-verified, idempotent on event id): charge.success/failed and virtual-account credits.")
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .DisableRateLimiting(); // HMAC-verified; providers retry in bursts and must not be throttled with ordinary traffic
     }
 }

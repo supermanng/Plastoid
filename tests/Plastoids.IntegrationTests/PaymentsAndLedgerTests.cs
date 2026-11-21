@@ -104,7 +104,11 @@ public class PaymentsAndLedgerTests(PlastoidsApiFactory factory)
         var before1010 = await BalanceAsync(AccountCodes.BankOperating);
         var swept = await staff.PostAsync("/api/v1/admin/payments/sweeps/run", null);
         swept.StatusCode.Should().Be(HttpStatusCode.OK, await swept.Content.ReadAsStringAsync());
-        (await BalanceAsync(AccountCodes.BankOperating) - before1010).Should().Be(Money.NairaAmount(8_225));
+        // The sweep moves every settled-but-unswept commission (other tests' payments included): assert the ledger moved by the sweep total, which includes this sale's 8,225.
+        var sweptBody = await swept.Content.ReadFromJsonAsync<JsonElement>(Json);
+        var sweptAmount = sweptBody.GetProperty("amount").GetProperty("amount").GetInt64();
+        sweptAmount.Should().BeGreaterThanOrEqualTo(822_500);
+        (await BalanceAsync(AccountCodes.BankOperating) - before1010).Should().Be(Money.Kobo(sweptAmount));
 
         // Entry 5: a ₦4,500 refund issues immediately (below ₦100,000) and reverses both shares pro rata.
         staff.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
@@ -268,5 +272,12 @@ public class PaymentsAndLedgerTests(PlastoidsApiFactory factory)
             (await db.Outbox.AsNoTracking().CountAsync(m => m.Topic == "plastoids.ledger.shortfall-detected.v1")).Should().BeGreaterThanOrEqualTo(1);
             (await scope.ServiceProvider.GetRequiredService<IPayoutControls>().ArePayoutsFrozenAsync(CancellationToken.None)).Should().BeTrue();
         }
+
+        // Finance lifts the freeze (Sprint 7 endpoint) so later tests can run payouts.
+        staff.DefaultRequestHeaders.Remove("Idempotency-Key");
+        staff.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
+        var unfrozen = await staff.PostAsJsonAsync("/api/v1/admin/ledger/reconciliation/unfreeze", new { reason = "Simulated shortfall in the integration suite" });
+        unfrozen.StatusCode.Should().Be(HttpStatusCode.OK, await unfrozen.Content.ReadAsStringAsync());
+        (await staff.GetFromJsonAsync<JsonElement>("/api/v1/admin/ledger/reconciliation", Json)).GetProperty("payoutsFrozen").GetBoolean().Should().BeFalse();
     }
 }

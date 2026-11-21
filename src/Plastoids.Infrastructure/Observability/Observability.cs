@@ -19,7 +19,8 @@ public static class Observability
             .ReadFrom.Services(services)
             .Enrich.FromLogContext()
             .Enrich.WithProperty("service", ServiceName)
-            // PII never reaches logs: destructure only to depth 2 and never dump entity graphs.
+            // PII never reaches logs: sensitive members are masked by PiiDestructuringPolicy, graphs stop at depth 2.
+            .Destructure.With<PiiDestructuringPolicy>()
             .Destructure.ToMaximumDepth(2)
             .WriteTo.Console(new RenderedCompactJsonFormatter()));
         return builder;
