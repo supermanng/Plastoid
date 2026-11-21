@@ -1,0 +1,6 @@
+P:System.DateTime.Now;Use IClock.UtcNow
+P:System.DateTime.UtcNow;Use IClock.UtcNow
+P:System.DateTime.Today;Use IClock.UtcNow
+P:System.DateTimeOffset.Now;Use IClock.UtcNow
+P:System.DateTimeOffset.UtcNow;Use IClock.UtcNow
+M:System.Guid.NewGuid;Use Guid.CreateVersion7() (time-ordered, stored as BINARY(16))

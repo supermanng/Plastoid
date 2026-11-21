@@ -1,0 +1,12 @@
+bin/
+obj/
+artifacts/*
+!artifacts/.gitkeep
+.vs/
+.idea/
+*.user
+*.swp
+.DS_Store
+TestResults/
+appsettings.*.local.json
+.env
