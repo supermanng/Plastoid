@@ -18,6 +18,7 @@
     <PackageReference Include="MediatR" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
     <PackageReference Include="Confluent.Kafka" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Quartz.Extensions.Hosting" />
     <PackageReference Include="StackExchange.Redis" />
     <PackageReference Include="AWSSDK.S3" />

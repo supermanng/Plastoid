@@ -11,6 +11,7 @@ services:
       --collation-server=utf8mb4_0900_ai_ci
       --innodb-buffer-pool-size=512M
       --max-connections=300
+      --log-bin-trust-function-creators=1
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: plastoids
@@ -63,27 +64,22 @@ services:
       timeout: 3s
       retries: 10
 
-  minio:
-    image: quay.io/minio/minio:latest
-    command: server /data --console-address ":9001"
+  s3:
+    # S3-compatible object store for local dev. MinIO withdrew its public images (Docker Hub and quay.io both
+    # refuse pulls as of Nov 2026), so Adobe's S3Mock stands in; production targets real S3-compatible storage.
+    image: adobe/s3mock:4.9.0
     environment:
-      MINIO_ROOT_USER: plastoids
-      MINIO_ROOT_PASSWORD: plastoids-secret
+      initialBuckets: plastoids
+      root: /data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9000:9090"
     volumes:
-      - minio-data:/data
-
-  minio-init:
-    image: quay.io/minio/mc:latest
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://minio:9000 plastoids plastoids-secret; do sleep 1; done;
-      mc mb --ignore-existing local/plastoids;
-      exit 0"
+      - s3-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:9090/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   mailpit:
     image: axllent/mailpit:latest
@@ -104,4 +100,4 @@ services:
 volumes:
   mysql-data:
   kafka-data:
-  minio-data:
+  s3-data:

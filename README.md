@@ -7,11 +7,11 @@ Sponsored-learning platform for Nigeria. Blueprint: [docs/Plastoids_Blueprint.md
 ## Quick start
 
 ```bash
-make up          # MySQL, Kafka, Redis, MinIO, Mailpit, Kafka UI (http://localhost:8080)
+make up          # MySQL, Kafka, Redis, S3Mock, Mailpit, Kafka UI (http://localhost:8080)
 make migrate     # apply EF migrations
 make run         # API on http://localhost:5080 (Development: migrates on startup, diagnostics enabled)
 make test-unit   # unit + architecture tests
-make test-integration   # Testcontainers: real MySQL, Kafka, Redis
+make test-integration   # Testcontainers: real MySQL, Kafka, Redis, S3Mock
 ```
 
 Integration tests start MySQL in a container by default. To use an existing MySQL server instead (the tests create and drop a
@@ -28,6 +28,27 @@ For a MySQL 8.0 server also set `MySql:ServerVersion` (e.g. `8.0.45-mysql`) so P
 MySQL containers (compose and Testcontainers) run as the `mysql` user because the image's `gosu` step hangs on some
 Docker Desktop builds; see `docs/adr/0006`. If a MySQL container ever sticks at "Switching to dedicated user", also check
 `docker image inspect mysql:8.4 --format '{{.Architecture}}'` is your host's architecture.
+
+## Signing in (Sprint 1)
+
+Phone OTP is the primary flow; locally the SMS is written to the API log (`[fake-sms] …`):
+
+```bash
+curl -s -X POST localhost:5080/api/v1/identity/auth/otp/request -H 'Content-Type: application/json' -d '{"phone":"08031234567"}'
+```
+
+```bash
+curl -s -X POST localhost:5080/api/v1/identity/auth/otp/verify -H 'Content-Type: application/json' -d '{"phone":"08031234567","code":"123456","dateOfBirth":"1999-01-01","displayName":"Ada"}'
+```
+
+Email + password (`POST /auth/register-email` once signed in, then `POST /auth/token` with `grantType: password`),
+`refresh_token` and `google` grants are on the same token endpoint. MFA is TOTP: `POST /me/mfa/enable`, then
+`POST /auth/mfa/verify`. Tutor, sponsor and staff policies require a session that completed MFA.
+
+Development seeds tenant zero, three learners and a staff user (`Seed` section of `appsettings.Development.json`;
+the staff password and TOTP secret there are development-only values). Staff endpoints live under `/api/v1/admin/*`
+and also need the caller's IP in `Admin:IpAllowList`. Secrets (`Secrets:JwtSigningKey`, `FieldEncryptionKey`,
+`BlindIndexKey`) must be set per environment; the Development ones are placeholders.
 
 ## Layout
 

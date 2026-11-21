@@ -23,6 +23,10 @@ Start MySQL containers with `user: mysql` (compose) and `WithCreateParameterModi
 
 ## Consequences
 
+- MySQL must run with `log_bin_trust_function_creators=1` (compose and Testcontainers pass it as a server flag) because the
+  Audit module's migration creates triggers from a non-SUPER account while binary logging is on. On a managed server
+  (e.g. DigitalOcean) set that variable in the cluster's configuration, or have an admin create the two triggers.
+
 - Dev and test MySQL containers start in ~10 s regardless of the `gosu` issue.
 - Testcontainers' default MySQL readiness probe (`mysql --wait` reading a root-owned 0600 `my.cnf`) cannot run as
   the mysql user and retries forever, so the test factory waits for the server's "ready for connections … port: 3306"

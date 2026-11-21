@@ -2,7 +2,7 @@
 
 API := src/Plastoids.Api/Plastoids.Api.csproj
 
-up:            ## Start MySQL, Kafka, Redis, MinIO, Mailpit, Kafka UI
+up:            ## Start MySQL, Kafka, Redis, S3Mock, Mailpit, Kafka UI
 	docker compose up -d --wait
 
 down:          ## Stop the local stack (keeps volumes)
@@ -19,6 +19,7 @@ test: test-unit test-integration
 test-unit:     ## Unit + architecture tests (no Docker needed)
 	dotnet test tests/Plastoids.SharedKernel.Tests -c Release --nologo
 	dotnet test tests/Plastoids.ArchitectureTests -c Release --nologo
+	dotnet test tests/Plastoids.Modules.Identity.Tests -c Release --nologo
 
 test-integration: ## Testcontainers (needs Docker)
 	dotnet test tests/Plastoids.IntegrationTests -c Release --nologo
@@ -26,8 +27,8 @@ test-integration: ## Testcontainers (needs Docker)
 migrate:       ## Apply all pending EF migrations to the configured MySQL
 	dotnet run --project $(API) -- migrate
 
-seed:          ## Seed reference data (tenant zero, chart of accounts) — arrives in Sprint 1/3
-	@echo "seed: nothing to seed yet (Sprint 1 adds tenant zero and staff user; Sprint 3 adds the chart of accounts)"
+seed:          ## Seed tenant zero, the staff user and three learners (runs automatically with Seed:Enabled, i.e. `make run`)
+	ASPNETCORE_ENVIRONMENT=Development Seed__Enabled=true dotnet run --project $(API) -- migrate
 
 run:           ## Run the API in Development (migrates on startup)
 	ASPNETCORE_ENVIRONMENT=Development dotnet run --project $(API)

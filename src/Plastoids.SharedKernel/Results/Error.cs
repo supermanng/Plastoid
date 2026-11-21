@@ -8,6 +8,7 @@ public enum ErrorType
     Conflict = 3,
     Unauthorized = 4,
     Forbidden = 5,
+    RateLimited = 6,
 }
 
 /// <summary>A stable, machine-readable error. <see cref="Code"/> is what clients switch on; <see cref="Message"/> is for humans.</summary>
@@ -21,4 +22,5 @@ public record Error(string Code, string Message, ErrorType Type = ErrorType.Fail
     public static Error Unauthorized(string code, string message) => new(code, message, ErrorType.Unauthorized);
     public static Error Forbidden(string code, string message) => new(code, message, ErrorType.Forbidden);
     public static Error Failure(string code, string message) => new(code, message, ErrorType.Failure);
+    public static Error RateLimited(string code, string message) => new(code, message, ErrorType.RateLimited);
 }

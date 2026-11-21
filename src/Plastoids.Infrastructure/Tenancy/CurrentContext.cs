@@ -51,7 +51,9 @@ internal sealed class CurrentContext(IHttpContextAccessor accessor) : ICurrentTe
 
 
     public IReadOnlyCollection<string> Roles
-        => Principal?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToArray() ?? [];
+        => Principal?.Identities.SelectMany(i => i.FindAll(i.RoleClaimType)).Select(c => c.Value).Distinct().ToArray() ?? [];
+
+    public bool MfaVerified => Principal?.HasClaim("amr", "mfa") ?? false;
 
     public IReadOnlyCollection<Guid> OrganisationIds
         => Principal?.FindAll(OrganisationClaim).Select(c => Guid.TryParse(c.Value, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).ToArray() ?? [];

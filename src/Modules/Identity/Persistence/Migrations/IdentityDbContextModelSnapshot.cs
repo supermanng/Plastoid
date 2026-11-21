@@ -111,6 +111,568 @@ namespace Plastoids.Modules.Identity.Persistence.Migrations
 
                     b.ToTable("identity_outbox", (string)null);
                 });
+
+            modelBuilder.Entity("Plastoids.Modules.Identity.Domain.DataExportRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int")
+                        .HasColumnName("attempts");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<string>("JsonBlobKey")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)")
+                        .HasColumnName("json_blob_key");
+
+                    b.Property<string>("PdfBlobKey")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)")
+                        .HasColumnName("pdf_blob_key");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("requested_at");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_identity_data_export_requests");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_identity_data_export_requests_tenant_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_identity_data_export_requests_user_id");
+
+                    b.HasIndex("Status", "RequestedAt")
+                        .HasDatabaseName("ix_identity_data_export_requests_status_requested_at");
+
+                    b.ToTable("identity_data_export_requests", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Identity.Domain.Membership", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("GrantedBy")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("granted_by");
+
+                    b.Property<Guid?>("OrganisationId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("organisation_id");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("role");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_identity_memberships");
+
+                    b.HasIndex("OrganisationId")
+                        .HasDatabaseName("ix_identity_memberships_organisation_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_identity_memberships_tenant_id");
+
+                    b.HasIndex("UserId", "OrganisationId", "Role")
+                        .IsUnique()
+                        .HasDatabaseName("ix_identity_memberships_user_id_organisation_id_role");
+
+                    b.ToTable("identity_memberships", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Identity.Domain.MfaRecoveryCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("code_hash");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("used_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_identity_mfa_recovery_codes");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_identity_mfa_recovery_codes_tenant_id");
+
+                    b.HasIndex("UserId", "CodeHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_identity_mfa_recovery_codes_user_id_code_hash");
+
+                    b.ToTable("identity_mfa_recovery_codes", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Identity.Domain.Organisation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CacNumber")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("cac_number");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("SignatoryEmail")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("varchar(320)")
+                        .HasColumnName("signatory_email");
+
+                    b.Property<string>("SignatoryName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("signatory_name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("VerificationStatus")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("verification_status");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("verified_at");
+
+                    b.Property<Guid?>("VerifiedBy")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("verified_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_identity_organisations");
+
+                    b.HasIndex("CacNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_identity_organisations_cac_number");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_identity_organisations_tenant_id");
+
+                    b.HasIndex("VerificationStatus")
+                        .HasDatabaseName("ix_identity_organisations_verification_status");
+
+                    b.ToTable("identity_organisations", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Identity.Domain.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Amr")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("amr");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("created_by_ip");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("ReplacedByHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("replaced_by_hash");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_identity_refresh_tokens");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_identity_refresh_tokens_tenant_id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_identity_refresh_tokens_token_hash");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_identity_refresh_tokens_user_id");
+
+                    b.ToTable("identity_refresh_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Identity.Domain.Tenant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("name");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("slug");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_identity_tenants");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("ix_identity_tenants_slug");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_identity_tenants_tenant_id");
+
+                    b.ToTable("identity_tenants", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Identity.Domain.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CareerGoal")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("career_goal");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("DobCiphertext")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)")
+                        .HasColumnName("dob_ciphertext");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(320)
+                        .HasColumnType("varchar(320)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("email_verified_at");
+
+                    b.Property<string>("Interests")
+                        .IsRequired()
+                        .HasColumnType("json")
+                        .HasColumnName("interests_json");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_login_at");
+
+                    b.Property<bool>("MfaEnabled")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("mfa_enabled");
+
+                    b.Property<string>("MfaSecretCiphertext")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)")
+                        .HasColumnName("mfa_secret_ciphertext");
+
+                    b.Property<DateTime?>("NinVerifiedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("nin_verified_at");
+
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)")
+                        .HasColumnName("password_hash");
+
+                    b.Property<string>("PhoneCiphertext")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)")
+                        .HasColumnName("phone_ciphertext");
+
+                    b.Property<string>("PhoneHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("phone_hash");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_identity_users");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasDatabaseName("ix_identity_users_email");
+
+                    b.HasIndex("PhoneHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_identity_users_phone_hash");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_identity_users_status");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_identity_users_tenant_id");
+
+                    b.ToTable("identity_users", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Identity.Domain.DataExportRequest", b =>
+                {
+                    b.HasOne("Plastoids.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_identity_data_export_requests_users_user_id");
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Identity.Domain.Membership", b =>
+                {
+                    b.HasOne("Plastoids.Modules.Identity.Domain.Organisation", null)
+                        .WithMany()
+                        .HasForeignKey("OrganisationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_identity_memberships_organisations_organisation_id");
+
+                    b.HasOne("Plastoids.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_identity_memberships_users_user_id");
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Identity.Domain.MfaRecoveryCode", b =>
+                {
+                    b.HasOne("Plastoids.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_identity_mfa_recovery_codes_users_user_id");
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Identity.Domain.RefreshToken", b =>
+                {
+                    b.HasOne("Plastoids.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_identity_refresh_tokens_users_user_id");
+                });
 #pragma warning restore 612, 618
         }
     }

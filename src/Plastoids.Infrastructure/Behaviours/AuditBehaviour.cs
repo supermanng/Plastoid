@@ -69,7 +69,8 @@ public sealed class AuditBehaviour<TRequest, TResponse>(IUnitOfWork unitOfWork, 
                 continue;
             }
 
-            dict[p.Name] = values[p];
+            // Enums by name so the audit trail stays readable when the enum is reordered later.
+            dict[p.Name] = values[p] is Enum e ? e.ToString() : values[p];
         }
 
         return JsonSerializer.Serialize(dict, EventJson.Options);

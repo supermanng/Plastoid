@@ -16,6 +16,8 @@ using Plastoids.Infrastructure.Persistence;
 using Plastoids.Infrastructure.Persistence.Interceptors;
 using Plastoids.Infrastructure.Persistence.Shared;
 using Plastoids.Infrastructure.Secrets;
+using Plastoids.Infrastructure.Security;
+using Plastoids.Infrastructure.Sms;
 using Plastoids.Infrastructure.Storage;
 using Plastoids.Infrastructure.Tenancy;
 using Plastoids.Infrastructure.Time;
@@ -67,6 +69,21 @@ public static class InfrastructureServiceCollectionExtensions
         services.Configure<BlobStorageOptions>(configuration.GetSection(BlobStorageOptions.SectionName));
         services.AddSingleton<IBlobStorage, S3BlobStorage>();
         services.AddSingleton<ISecretProvider, ConfigurationSecretProvider>();
+
+        // Security primitives (column encryption, password hashing) and outbound SMS.
+        services.AddSingleton<IFieldEncryptor, AesGcmFieldEncryptor>();
+        services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
+        services.Configure<SmsOptions>(configuration.GetSection(SmsOptions.SectionName));
+        services.Configure<Http.AdminOptions>(configuration.GetSection(Http.AdminOptions.SectionName));
+        if (string.Equals(configuration[$"{SmsOptions.SectionName}:Provider"], "termii", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddHttpClient<ISmsSender, TermiiSmsSender>();
+        }
+        else
+        {
+            services.AddSingleton<FakeSmsSender>();
+            services.AddSingleton<ISmsSender>(sp => sp.GetRequiredService<FakeSmsSender>());
+        }
 
         // Quartz (RAM store in Sprint 0; MySQL clustered store is ADR-0004's follow-up).
         services.AddQuartz(q =>

@@ -14,5 +14,11 @@
     </PackageReference>
     <PackageReference Include="MediatR" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Quartz.Extensions.Hosting" />
+    <PackageReference Include="StackExchange.Redis" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Plastoids.Modules.Identity.Tests" />
+    <InternalsVisibleTo Include="Plastoids.IntegrationTests" />
   </ItemGroup>
 </Project>

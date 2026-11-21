@@ -2,8 +2,11 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Diagnostics;
 using Plastoids.Api;
 using Plastoids.Infrastructure;
+using Plastoids.Infrastructure.Http;
 using Plastoids.Infrastructure.Observability;
+using Plastoids.Infrastructure.Security;
 using Plastoids.Infrastructure.Persistence;
+using Plastoids.Modules.Audit;
 using Plastoids.Modules.Identity;
 using Serilog;
 
@@ -15,10 +18,12 @@ var services = builder.Services;
 
 services.AddPlastoidsInfrastructure(configuration);
 services.AddPlastoidsPipeline();
+services.AddPlastoidsAuthentication(configuration);
 services.AddPlastoidsTelemetry(configuration["Otlp:Endpoint"]);
 
 // ---- Modules (order = migration order) ----
 services.AddModule<IdentityModule>(configuration);
+services.AddModule<AuditModule>(configuration);
 
 services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
 {
@@ -26,15 +31,18 @@ services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
 });
 services.AddExceptionHandler<GlobalExceptionHandler>();
 services.AddOpenApi("v1");
+// Per-IP limits (blueprint §17: stricter on /auth/*). Tests raise them through RateLimiting:* settings.
+var authPermitsPerMinute = configuration.GetValue("RateLimiting:AuthPermitsPerMinute", 10);
+var globalTokensPerMinute = configuration.GetValue("RateLimiting:GlobalTokensPerMinute", 300);
 services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     o.AddPolicy("auth", ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = authPermitsPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx => RateLimitPartition.GetTokenBucketLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
-        _ => new TokenBucketRateLimiterOptions { TokenLimit = 300, TokensPerPeriod = 300, ReplenishmentPeriod = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+        _ => new TokenBucketRateLimiterOptions { TokenLimit = globalTokensPerMinute, TokensPerPeriod = globalTokensPerMinute, ReplenishmentPeriod = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 
 services.AddPlastoidsHealthChecks(configuration);
@@ -54,6 +62,9 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseSerilogRequestLogging();
 app.UseRateLimiter();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseMiddleware<AdminIpAllowListMiddleware>();
 
 app.MapOpenApi();
 if (app.Environment.IsDevelopment())
