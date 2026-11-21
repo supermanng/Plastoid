@@ -51,6 +51,10 @@ the staff password and TOTP secret there are development-only values). Staff end
 and also need the caller's IP in `Admin:IpAllowList`. Secrets (`Secrets:JwtSigningKey`, `FieldEncryptionKey`,
 `BlindIndexKey`) must be set per environment; the Development ones are placeholders.
 
+Development seed (`Seed:Enabled`) creates two staff accounts with MFA already enrolled: `staff@plastoids.local` and the
+super admin `admin@plastoids.local` (passwords and TOTP secrets under `Seed:*` in `appsettings.Development.json`). Two
+staff members are needed locally because the four-eyes commands refuse the same maker and checker.
+
 ## Tutors and catalogue (Sprint 2)
 
 Tutor onboarding follows blueprint §13: `POST /tutors/applications` (grants the `tutor` role; refresh the token and

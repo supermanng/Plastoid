@@ -22,6 +22,16 @@ public sealed class SeedOptions
 
     /// <summary>Base32 TOTP secret for the seeded staff user so local tools and tests can complete MFA.</summary>
     public string StaffMfaSecret { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional second staff account ("super admin"): seeded only when both password and secret are set. Having two staff
+    /// members locally is what makes the four-eyes flows (payout batches, fee rules, role grants, large refunds) usable,
+    /// since the checker must differ from the maker. Platform permissions are the same staff role + MFA.
+    /// </summary>
+    public string SuperAdminPhone { get; set; } = "+2348000000002";
+    public string SuperAdminEmail { get; set; } = "admin@plastoids.local";
+    public string SuperAdminPassword { get; set; } = string.Empty;
+    public string SuperAdminMfaSecret { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -62,16 +72,11 @@ internal sealed class DevelopmentSeeder(IServiceProvider provider, IConfiguratio
             db.Tenants.Add(Tenant.Create(Tenants.Marketplace, "Plastoids marketplace", "plastoids"));
         }
 
-        var staffHash = encryptor.BlindIndex(options.StaffPhone);
-        if (!await db.Users.AnyAsync(u => u.PhoneHash == staffHash, cancellationToken))
+        await SeedStaffAsync(options.StaffPhone, options.StaffEmail, options.StaffPassword, options.StaffMfaSecret, "Seyi Adeyemi (staff)");
+
+        if (!string.IsNullOrWhiteSpace(options.SuperAdminPassword) && !string.IsNullOrWhiteSpace(options.SuperAdminMfaSecret))
         {
-            var staff = User.Register(Tenants.Marketplace, encryptor.Encrypt(options.StaffPhone), staffHash, encryptor.Encrypt("1990-06-15"), new DateOnly(1990, 6, 15), "Seyi Adeyemi (staff)", clock.UtcNow).Value;
-            staff.SetEmailAndPassword(options.StaffEmail, hasher.Hash(options.StaffPassword));
-            staff.BeginMfaEnrolment(encryptor.Encrypt(options.StaffMfaSecret));
-            staff.ConfirmMfa();
-            db.Users.Add(staff);
-            db.Memberships.Add(Membership.Platform(Tenants.Marketplace, staff.Id, RoleNames.Staff));
-            logger.LogInformation("Seeded staff user {Email}", options.StaffEmail);
+            await SeedStaffAsync(options.SuperAdminPhone, options.SuperAdminEmail, options.SuperAdminPassword, options.SuperAdminMfaSecret, "Super Admin");
         }
 
         foreach (var (phone, name, dob) in Learners)
@@ -89,6 +94,23 @@ internal sealed class DevelopmentSeeder(IServiceProvider provider, IConfiguratio
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        async Task SeedStaffAsync(string phone, string email, string password, string mfaSecret, string displayName)
+        {
+            var hash = encryptor.BlindIndex(phone);
+            if (await db.Users.AnyAsync(u => u.PhoneHash == hash, cancellationToken))
+            {
+                return;
+            }
+
+            var staff = User.Register(Tenants.Marketplace, encryptor.Encrypt(phone), hash, encryptor.Encrypt("1990-06-15"), new DateOnly(1990, 6, 15), displayName, clock.UtcNow).Value;
+            staff.SetEmailAndPassword(email, hasher.Hash(password));
+            staff.BeginMfaEnrolment(encryptor.Encrypt(mfaSecret));
+            staff.ConfirmMfa();
+            db.Users.Add(staff);
+            db.Memberships.Add(Membership.Platform(Tenants.Marketplace, staff.Id, RoleNames.Staff));
+            logger.LogInformation("Seeded staff user {Email} ({DisplayName})", email, displayName);
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

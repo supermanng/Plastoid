@@ -17,7 +17,7 @@ Or from this folder: `npm install` then `npm run dev`. Open http://localhost:517
 Sign-in options locally:
 
 - **Learners / tutors / sponsors**: phone + OTP. SMS is faked in Development; the 6-digit code is printed in the API log as `[fake-sms] to ***1234: …`.
-- **Staff**: email + password + authenticator code at `/auth/staff`. The seeded account is `staff@plastoids.local` with the password and TOTP secret from `Seed:StaffPassword` / `Seed:StaffMfaSecret` (user-secrets or `appsettings.Development.json`). Add the secret to an authenticator app to get codes.
+- **Staff**: email + password + authenticator code at `/auth/staff`. Two accounts are seeded so four-eyes flows (payout batches, fee rules, role grants, large refunds) can be exercised with a different maker and checker: `staff@plastoids.local` (`Seed:StaffPassword` / `Seed:StaffMfaSecret`) and the super admin `admin@plastoids.local` (`Seed:SuperAdminPassword` / `Seed:SuperAdminMfaSecret`), both in `appsettings.Development.json`. Add the TOTP secret to an authenticator app to get codes. Both carry the `staff` role; the API has no separate super-admin role.
 - Tutor, sponsor and staff areas need an MFA-stepped-up token. The app sends you to `/auth/mfa` to enrol or confirm.
 
 Payments and payouts use fake providers locally: the fake gateway's checkout URL is not reachable, so pages show the payment intent id and a link to the payment detail page instead; mark intents paid by posting the gateway webhook (see `docs/runbooks/` and the integration tests for the HMAC).
