@@ -163,6 +163,28 @@ units sale go back to the wallet; sponsors can settle a programme invoice from t
 `POST …/programmes/{id}/fund-from-wallet`. Units are never paid out as cash. Tests: `Plastoids.Modules.Wallet.Tests`,
 `UnitPostingsTests` and `IntegrationTests/WalletTests.cs`.
 
+## Organisation-owned courses (ADR 0019)
+
+Any verified organisation (a sponsor, employer, institution, hub or the new `provider` type) can own courses and engage
+verified tutors to teach them; learners buy seats as usual and the money splits three ways.
+
+- Organisation roles gain `author` (create and edit courses, engage tutors); owners can do the same. Policy
+  `organisation-author` guards `POST /catalogue/organisations/{organisationId}/courses` and the engagement endpoints.
+- Authoring endpoints (`/catalogue/courses/{courseId}/…`) are resource-authorised: the owning tutor, an owner/author of the
+  owning organisation, or staff. `GET /catalogue/courses/{courseId}/authoring` returns the draft for the builder;
+  `GET /catalogue/courses/mine` and `GET /catalogue/organisations/{organisationId}/courses` list courses.
+- Engagements: `POST …/courses/{courseId}/engagements` offers a verified tutor `revenue_share` (basis points of the sale net
+  of commission) or `per_enrolment` (fixed fee per paid enrolment) terms; the tutor accepts or declines at
+  `POST /catalogue/engagements/{id}/respond`; `GET /catalogue/engagements/mine` lists a tutor's offers. Offerings of an
+  organisation course name the teaching tutor (`tutorUserId`), and cohorts default to that tutor.
+- Money: fee code `course_provider` (`Fees:CourseProviderBps`, default 15%). Entry 1 / entry 12 credit 4010 commission,
+  2010 the tutor share and **2060 Provider payable** (per organisation) the rest; entry 5 reverses all three pro rata.
+- Payouts: earnings and payouts carry a payee type. `PUT /payouts/organisations/{organisationId}/payout-account` (owner or
+  finance; the bank account name must match the registered organisation name) and
+  `GET /payouts/organisations/{organisationId}/earnings`; the weekly four-eyes batch pays organisations from 2060.
+- Web app: organisation Courses, course Tutors and Payouts pages in the sponsor area; a tutor Offers page; public course
+  pages show the provider.
+
 ## Web app (React)
 
 `frontend/` is a Vite + React 19 single-page app covering the public site, learner, tutor, sponsor and back-office areas

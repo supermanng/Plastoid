@@ -23,9 +23,9 @@ internal sealed class SubmitForReviewHandler(CatalogueDbContext db, CourseAccess
         }
 
         var course = owned.Value;
-        if (!await access.OwnerIsVerifiedTutorAsync(course, cancellationToken))
+        if (!await access.OwnerIsVerifiedAsync(course, cancellationToken))
         {
-            return Error.Forbidden("tutor_not_verified", "Finish tutor verification (identity, qualifications, subject review) before submitting a course.");
+            return course.OwnerNotVerified();
         }
 
         var results = await checks.RunAsync(course, cancellationToken);

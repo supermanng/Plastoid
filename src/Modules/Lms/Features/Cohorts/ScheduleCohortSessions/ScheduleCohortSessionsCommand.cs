@@ -7,8 +7,10 @@ using Microsoft.EntityFrameworkCore;
 using Plastoids.Infrastructure.Http;
 using Plastoids.Infrastructure.Integrations;
 using Plastoids.Infrastructure.Security;
+using Plastoids.Modules.Catalogue.Contracts;
 using Plastoids.Modules.Lms.Domain;
 using Plastoids.Modules.Lms.Persistence;
+using Plastoids.Modules.Lms.Services;
 using Plastoids.SharedKernel.Cqrs;
 using Plastoids.SharedKernel.Results;
 using Plastoids.SharedKernel.Tenancy;
@@ -33,7 +35,7 @@ internal sealed class ScheduleCohortSessionsValidator : AbstractValidator<Schedu
     }
 }
 
-internal sealed class ScheduleCohortSessionsHandler(LmsDbContext db, ILiveVideoProvider video, ICurrentUser currentUser) : ICommandHandler<ScheduleCohortSessionsCommand, ScheduleCohortSessionsResponse>
+internal sealed class ScheduleCohortSessionsHandler(LmsDbContext db, ILiveVideoProvider video, ICourseOutlineReader courses, TeachingAccess teaching, ICurrentUser currentUser) : ICommandHandler<ScheduleCohortSessionsCommand, ScheduleCohortSessionsResponse>
 {
     public async Task<Result<ScheduleCohortSessionsResponse>> Handle(ScheduleCohortSessionsCommand request, CancellationToken cancellationToken)
     {
@@ -44,9 +46,13 @@ internal sealed class ScheduleCohortSessionsHandler(LmsDbContext db, ILiveVideoP
         }
 
         var userId = currentUser.UserId ?? Guid.Empty;
-        if (cohort.TutorUserId != userId && !currentUser.Roles.Contains("staff"))
+        if (cohort.TutorUserId != userId)
         {
-            return Error.Forbidden("not_cohort_tutor", "Only the cohort tutor (or staff) can schedule sessions.");
+            var course = await courses.GetPublishedAsync(cohort.CourseId, null, cancellationToken);
+            if (course is null || !await teaching.CanManageCourseAsync(course, userId, cancellationToken))
+            {
+                return Error.Forbidden("not_cohort_tutor", "Only the cohort tutor, the course's teachers or staff can schedule sessions.");
+            }
         }
 
         var learners = await db.Enrolments.AsNoTracking().Where(e => e.CohortId == cohort.Id).Select(e => e.LearnerId).ToListAsync(cancellationToken);
@@ -93,7 +99,7 @@ internal static class ScheduleCohortSessionsEndpoint
         group.MapPost("/{cohortId:guid}/sessions", async (Guid cohortId, ScheduleCohortSessionsRequest body, ISender sender, CancellationToken ct) =>
                 (await sender.Send(new ScheduleCohortSessionsCommand(cohortId, body.Weekdays, body.StartTimeUtc, body.DurationMinutes, body.TitlePrefix ?? "Class"), ct)).ToHttpResult(StatusCodes.Status201Created))
             .WithName("ScheduleCohortSessions")
-            .WithSummary("Tutor: create the cohort's weekly live classes (idempotent on start time).")
-            .RequireAuthorization(Policies.Tutor);
+            .WithSummary("Teacher: create the cohort's weekly live classes (idempotent on start time).")
+            .RequireAuthorization(Policies.Mfa); // cohort tutor or teaching access, decided in the handler (ADR 0019 §4)
     }
 }

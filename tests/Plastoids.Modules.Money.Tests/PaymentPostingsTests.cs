@@ -137,6 +137,9 @@ public class PaymentPostingsTests
         Bps(new SaleContext(PaymentPurposes.Course, LearnerSources.TutorReferred), options).Should().Be(800);
         Bps(new SaleContext(PaymentPurposes.Booking, LearnerSources.Platform), options).Should().Be(1500);
         Bps(new SaleContext(PaymentPurposes.CoPay, LearnerSources.Platform), options).Should().Be(0);
+        FeeRules.CodeFor(new SaleContext(PaymentPurposes.Course, LearnerSources.Platform, ProviderSale: true)).Should().Be("course_provider");
+        FeeRules.CodeFor(new SaleContext(PaymentPurposes.Course, LearnerSources.TutorReferred, ProviderSale: true)).Should().Be("course_provider", "a provider sale is never tutor-referred");
+        Bps(new SaleContext(PaymentPurposes.Course, LearnerSources.Platform, ProviderSale: true), options).Should().Be(1500);
     }
 
     [Fact]
@@ -156,6 +159,166 @@ public class PaymentPostingsTests
         FakePaymentGateway.Fee(M.NairaAmount(2_000)).Should().Be(M.NairaAmount(30));
         FakePaymentGateway.Fee(M.NairaAmount(10_000)).Should().Be(M.NairaAmount(250));
         FakePaymentGateway.Fee(M.NairaAmount(500_000)).Should().Be(M.NairaAmount(2_000), "capped");
+    }
+}
+
+/// <summary>ADR 0019 provider variants: a sale of an organisation-owned course splits between Plastoids (4010), the engaged tutor (2010) and the organisation (2060).</summary>
+public class ProviderPostingsTests
+{
+    private static readonly DateTime Now = new(2026, 11, 22, 9, 0, 0, DateTimeKind.Utc);
+    private static readonly Guid Organisation = Guid.CreateVersion7();
+    private static readonly Guid Tutor = Guid.CreateVersion7();
+    private static readonly Guid Engagement = Guid.CreateVersion7();
+    private static readonly Guid WalletId = Guid.CreateVersion7();
+
+    private static long Dr(JournalEntryDraft d, string code) => d.Postings.Where(p => p.AccountCode == code).Sum(p => p.Debit.AmountKobo);
+    private static long Cr(JournalEntryDraft d, string code) => d.Postings.Where(p => p.AccountCode == code).Sum(p => p.Credit.AmountKobo);
+    private static bool Balanced(JournalEntryDraft d) => d.Postings.Sum(p => p.Debit.AmountKobo) == d.Postings.Sum(p => p.Credit.AmountKobo);
+
+    /// <summary>₦45,000 at 15%: commission 6,750; net 38,250; a 40% revenue share gives the tutor 15,300 and the organisation 22,950.</summary>
+    private static PaymentIntent ProviderSale(Guid? tutor = null, long tutorShareNaira = 15_300)
+    {
+        var intent = PaymentIntent.CreateForOrganisation(Tenants.Marketplace, Guid.CreateVersion7(), PaymentPurposes.Course, Guid.CreateVersion7(), "q_p", "Course", M.NairaAmount(45_000), Organisation, tutor ?? Tutor, Engagement, M.NairaAmount(tutorShareNaira), 1500, "course_provider");
+        intent.AttachCheckout("fake", "fk_prov", "https://checkout");
+        return intent;
+    }
+
+    [Fact]
+    public void Provider_intent_splits_commission_tutor_share_and_organisation_net()
+    {
+        var intent = ProviderSale();
+        intent.PayeeType.Should().Be(PayeeTypes.Organisation);
+        intent.IsProviderSale.Should().BeTrue();
+        intent.PayeeOrganisationId.Should().Be(Organisation);
+        intent.PayeeUserId.Should().Be(Tutor);
+        intent.EngagementId.Should().Be(Engagement);
+        intent.Commission.Should().Be(M.NairaAmount(6_750));
+        intent.TutorShare.Should().Be(M.NairaAmount(15_300));
+        intent.PayeeNet.Should().Be(M.NairaAmount(22_950));
+        (intent.Commission + intent.TutorShare + intent.PayeeNet).Should().Be(intent.Amount);
+    }
+
+    [Fact]
+    public void Provider_intent_caps_the_tutor_share_at_the_net_and_drops_it_without_a_tutor()
+    {
+        var capped = ProviderSale(tutorShareNaira: 40_000);
+        capped.TutorShare.Should().Be(M.NairaAmount(38_250));
+        capped.PayeeNet.Should().Be(M.Zero(), "never negative");
+
+        var noTutor = PaymentIntent.CreateForOrganisation(Tenants.Marketplace, Guid.CreateVersion7(), PaymentPurposes.Course, Guid.CreateVersion7(), "q_p", "Course", M.NairaAmount(45_000), Organisation, null, null, M.NairaAmount(15_300), 1500, "course_provider");
+        noTutor.TutorShare.Should().Be(M.Zero());
+        noTutor.PayeeNet.Should().Be(M.NairaAmount(38_250));
+        noTutor.PayeeUserId.Should().BeNull();
+    }
+
+    [Fact]
+    public void Entry1_provider_variant_credits_commission_tutor_share_and_provider_payable()
+    {
+        var d = PaymentPostings.Entry1Charge(ProviderSale(), Now);
+        LedgerService.Validate(d).IsSuccess.Should().BeTrue();
+        Balanced(d).Should().BeTrue();
+        Dr(d, AccountCodes.GatewayReceivable).Should().Be(4_500_000);
+        Cr(d, AccountCodes.CourseCommission).Should().Be(675_000);
+        Cr(d, AccountCodes.TutorPayable).Should().Be(1_530_000);
+        Cr(d, AccountCodes.ProviderPayable).Should().Be(2_295_000);
+        var tutor = d.Postings.Single(p => p.AccountCode == AccountCodes.TutorPayable);
+        tutor.OwnerType.Should().Be(SubLedgerOwnerTypes.Tutor);
+        tutor.OwnerId.Should().Be(Tutor);
+        var provider = d.Postings.Single(p => p.AccountCode == AccountCodes.ProviderPayable);
+        provider.OwnerType.Should().Be(SubLedgerOwnerTypes.Organisation);
+        provider.OwnerId.Should().Be(Organisation);
+    }
+
+    [Fact]
+    public void Entry1_provider_variant_without_a_tutor_posts_no_tutor_line()
+    {
+        var intent = PaymentIntent.CreateForOrganisation(Tenants.Marketplace, Guid.CreateVersion7(), PaymentPurposes.Course, Guid.CreateVersion7(), "q_p", "Course", M.NairaAmount(45_000), Organisation, null, null, M.Zero(), 1500, "course_provider");
+        intent.AttachCheckout("fake", "fk_prov2", "https://checkout");
+        var d = PaymentPostings.Entry1Charge(intent, Now);
+        LedgerService.Validate(d).IsSuccess.Should().BeTrue();
+        d.Postings.Should().NotContain(p => p.AccountCode == AccountCodes.TutorPayable);
+        Cr(d, AccountCodes.ProviderPayable).Should().Be(3_825_000);
+        Cr(d, AccountCodes.CourseCommission).Should().Be(675_000);
+    }
+
+    [Fact]
+    public void Entry12_provider_variant_releases_units_and_splits_like_the_card_sale()
+    {
+        var intent = PaymentIntent.CreateForOrganisation(Tenants.Marketplace, Guid.CreateVersion7(), PaymentPurposes.Course, Guid.CreateVersion7(), "q_p", "Course", M.NairaAmount(45_000), Organisation, Tutor, Engagement, M.NairaAmount(15_300), 1500, "course_provider");
+        intent.AttachUnits(WalletId, 45, 100_000, 4_600_000);
+        var d = PaymentPostings.Entry12UnitRedemption(intent, Now);
+        LedgerService.Validate(d).IsSuccess.Should().BeTrue();
+        Balanced(d).Should().BeTrue();
+        Dr(d, AccountCodes.UnitBalancesHeld).Should().Be(4_600_000);
+        Cr(d, AccountCodes.CourseCommission).Should().Be(675_000);
+        Cr(d, AccountCodes.TutorPayable).Should().Be(1_530_000);
+        Cr(d, AccountCodes.ProviderPayable).Should().Be(2_295_000);
+        Cr(d, AccountCodes.UnitRevaluation).Should().Be(100_000, "units bought dearer than the price applied");
+        d.Postings.Single(p => p.AccountCode == AccountCodes.ProviderPayable).OwnerId.Should().Be(Organisation);
+    }
+
+    [Fact]
+    public void Entry5_provider_refund_reverses_all_three_shares_pro_rata_and_balances()
+    {
+        var intent = ProviderSale();
+        intent.MarkSucceeded(M.NairaAmount(775), Now, Guid.CreateVersion7());
+        intent.MarkSettled(M.NairaAmount(775), Now.AddDays(1));
+
+        var full = Refund.Request(Tenants.Marketplace, intent.Id, M.NairaAmount(45_000), "Changed mind", Guid.CreateVersion7());
+        var d = PaymentPostings.Entry5Refund(intent, full, Now.AddDays(2));
+        LedgerService.Validate(d).IsSuccess.Should().BeTrue();
+        Balanced(d).Should().BeTrue();
+        Dr(d, AccountCodes.CourseCommission).Should().Be(675_000);
+        Dr(d, AccountCodes.TutorPayable).Should().Be(1_530_000);
+        Dr(d, AccountCodes.ProviderPayable).Should().Be(2_295_000);
+        Cr(d, AccountCodes.BankClientFunds).Should().Be(4_500_000);
+        d.Postings.Single(p => p.AccountCode == AccountCodes.ProviderPayable).OwnerType.Should().Be(SubLedgerOwnerTypes.Organisation);
+
+        // One third back: 15,000 → commission 2,250; tutor 5,100; organisation takes the residue 7,650.
+        var third = Refund.Request(Tenants.Marketplace, intent.Id, M.NairaAmount(15_000), "a third", Guid.CreateVersion7());
+        var t = PaymentPostings.Entry5Refund(intent, third, Now.AddDays(2));
+        LedgerService.Validate(t).IsSuccess.Should().BeTrue();
+        Balanced(t).Should().BeTrue();
+        Dr(t, AccountCodes.CourseCommission).Should().Be(225_000);
+        Dr(t, AccountCodes.TutorPayable).Should().Be(510_000);
+        Dr(t, AccountCodes.ProviderPayable).Should().Be(765_000);
+
+        // An awkward amount: every share rounds half to even and the organisation absorbs the kobo residue so the entry still balances.
+        var odd = Refund.Request(Tenants.Marketplace, intent.Id, new M(1_234_567, M.Naira), "odd", Guid.CreateVersion7());
+        var o = PaymentPostings.Entry5Refund(intent, odd, Now.AddDays(2));
+        LedgerService.Validate(o).IsSuccess.Should().BeTrue();
+        Balanced(o).Should().BeTrue();
+        (Dr(o, AccountCodes.CourseCommission) + Dr(o, AccountCodes.TutorPayable) + Dr(o, AccountCodes.ProviderPayable)).Should().Be(1_234_567);
+        Dr(o, AccountCodes.CourseCommission).Should().Be(185_185, "6,750/45,000 of 1,234,567 kobo = 185,185.05");
+        Dr(o, AccountCodes.TutorPayable).Should().Be(419_753, "15,300/45,000 of 1,234,567 kobo = 419,752.78");
+    }
+
+    [Fact]
+    public void Entry5_provider_refund_to_units_restores_the_payer_wallet()
+    {
+        var intent = PaymentIntent.CreateForOrganisation(Tenants.Marketplace, Guid.CreateVersion7(), PaymentPurposes.Course, Guid.CreateVersion7(), "q_p", "Course", M.NairaAmount(45_000), Organisation, Tutor, Engagement, M.NairaAmount(15_300), 1500, "course_provider");
+        intent.AttachUnits(WalletId, 45, 100_000, 4_500_000);
+        var refund = Refund.Request(Tenants.Marketplace, intent.Id, M.NairaAmount(9_000), "changed mind", Guid.CreateVersion7());
+        refund.RedirectToUnits();
+        var d = PaymentPostings.Entry5Refund(intent, refund, Now);
+        LedgerService.Validate(d).IsSuccess.Should().BeTrue();
+        Cr(d, AccountCodes.UnitBalancesHeld).Should().Be(900_000);
+        d.Postings.Single(p => p.AccountCode == AccountCodes.UnitBalancesHeld).OwnerId.Should().Be(WalletId);
+        Dr(d, AccountCodes.CourseCommission).Should().Be(135_000);
+        Dr(d, AccountCodes.TutorPayable).Should().Be(306_000);
+        Dr(d, AccountCodes.ProviderPayable).Should().Be(459_000);
+    }
+
+    [Fact]
+    public void Tutor_sales_are_unchanged_by_the_provider_fields()
+    {
+        var intent = PaymentIntent.Create(Tenants.Marketplace, Guid.CreateVersion7(), PaymentPurposes.Course, Guid.CreateVersion7(), "q_1", "Course", M.NairaAmount(45_000), Tutor, 2000, "course_platform");
+        intent.PayeeType.Should().Be(PayeeTypes.Tutor);
+        intent.IsProviderSale.Should().BeFalse();
+        intent.TutorShare.Should().Be(M.Zero());
+        intent.PayeeOrganisationId.Should().BeNull();
+        var d = PaymentPostings.Entry1Charge(intent, Now);
+        d.Postings.Should().NotContain(p => p.AccountCode == AccountCodes.ProviderPayable);
     }
 }
 

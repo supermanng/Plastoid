@@ -7,6 +7,7 @@
     <ProjectReference Include="../../Plastoids.Infrastructure/Plastoids.Infrastructure.csproj" />
     <ProjectReference Include="../Booking/Plastoids.Modules.Booking.csproj" />
     <ProjectReference Include="../Catalogue/Plastoids.Modules.Catalogue.csproj" />
+    <ProjectReference Include="../Identity/Plastoids.Modules.Identity.csproj" />
     <ProjectReference Include="../Payments/Plastoids.Modules.Payments.csproj" />
     <ProjectReference Include="../Applications/Contracts/Plastoids.Modules.Applications.Contracts.csproj" />
   </ItemGroup>

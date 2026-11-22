@@ -206,7 +206,7 @@ public class DefinitionOfDoneTests(PlastoidsApiFactory factory)
         Key(staff);
         (await staff.PostAsync($"/api/v1/admin/payouts/batches/{batchId}/submit", null)).StatusCode.Should().Be(HttpStatusCode.OK);
         var batch = await staff.GetFromJsonAsync<JsonElement>($"/api/v1/admin/payouts/batches/{batchId}", Json);
-        var payout = batch.GetProperty("payouts").EnumerateArray().Single(p => p.GetProperty("tutorUserId").GetGuid() == tutorUserId);
+        var payout = batch.GetProperty("payouts").EnumerateArray().Single(p => p.TryGetProperty("tutorUserId", out var tu) && tu.ValueKind == JsonValueKind.String && tu.GetGuid() == tutorUserId);
         var provider = factory.Services.GetRequiredService<FakePayoutProvider>();
         var (settlePayload, settleSignature) = provider.BuildWebhook("transfer.success", payout.GetProperty("providerReference").GetString()!, Money.Kobo(payout.GetProperty("amount").GetProperty("amount").GetInt64()), DateTime.UtcNow, "NIP-DOD");
         var settled = await factory.CreateClient().SendAsync(new HttpRequestMessage(HttpMethod.Post, "/api/v1/payouts/webhooks/fake") { Content = new StringContent(settlePayload, Encoding.UTF8, "application/json"), Headers = { { "x-payout-signature", settleSignature } } });

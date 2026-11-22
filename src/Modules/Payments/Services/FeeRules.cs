@@ -23,6 +23,9 @@ public sealed class FeeOptions
 
     /// <summary>Sponsored co-pay: no commission (fees are invoiced to the sponsor).</summary>
     public int CoPayBps { get; set; }
+
+    /// <summary>Sale of an organisation-owned course (ADR 0019: 15%); the tutor share comes out of the organisation's net.</summary>
+    public int CourseProviderBps { get; set; } = 1500;
 }
 
 /// <summary>
@@ -45,6 +48,7 @@ internal sealed class FeeRules(PaymentsDbContext db, IUnitOfWork unitOfWork, IOp
         PaymentPurposes.Booking => "live_tutoring",
         PaymentPurposes.CoPay => "co_pay",
         PaymentPurposes.Units => "units",
+        _ when context.ProviderSale => "course_provider", // the referral rate is a tutor's; a provider sale is not tutor-referred
         _ when context.LearnerSource == LearnerSources.TutorReferred => "course_tutor_referred",
         _ => "course_platform",
     };
@@ -54,6 +58,7 @@ internal sealed class FeeRules(PaymentsDbContext db, IUnitOfWork unitOfWork, IOp
         "live_tutoring" => o.LiveTutoringBps,
         "co_pay" => o.CoPayBps,
         "course_tutor_referred" => o.CourseTutorReferredBps,
+        "course_provider" => o.CourseProviderBps,
         "units" => 0,
         _ => o.CoursePlatformBps,
     };

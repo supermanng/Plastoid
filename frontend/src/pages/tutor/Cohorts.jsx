@@ -1,21 +1,24 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Plus, Users } from 'lucide-react';
 import { Alert, Button, Card, EmptyState, ErrorAlert, Field, FormGrid, Input, Modal, PageHeader, Select, StatusPill } from '../../components/ui';
+import { useAuth } from '../../lib/auth';
 import { useAction, useForm } from '../../lib/hooks';
 import { formatDate } from '../../lib/format';
-import { lmsApi } from '../../api/tutor';
-import { toIso, useRememberedCohorts, useRememberedCourses } from './shared';
+import { courseApi, engagementApi, lmsApi, tutorKeys } from '../../api/tutor';
+import { toIso, useRememberedCohorts } from './shared';
 
 /*
- * /tutor/cohorts — POST /lms/cohorts { courseId, offeringId, name, startsAt, endsAt, capacity, programmeId? }.
+ * /tutor/cohorts — POST /lms/cohorts { courseId, offeringId, name, startsAt, endsAt, capacity, programmeId?, tutorUserId? }.
+ * The course picker offers the tutor's own courses (GET /catalogue/courses/mine) and the organisation courses the tutor
+ * is actively engaged on (GET /catalogue/engagements/mine); for the latter `tutorUserId` names the signed-in tutor.
  * The Lms module has no "list my cohorts" read (only per-cohort threads/sessions), so cohorts created here are
  * remembered on this device (localStorage `plastoids.tutor.cohorts`).
  */
 export default function TutorCohorts() {
   const navigate = useNavigate();
   const { items: cohorts, remember, forget } = useRememberedCohorts();
-  const { items: courses } = useRememberedCourses();
   const [open, setOpen] = useState(false);
   const [openId, setOpenId] = useState('');
 
@@ -63,19 +66,47 @@ export default function TutorCohorts() {
         ) : null)
       )}
 
-      <CreateCohortModal open={open} onClose={() => setOpen(false)} courses={courses} onCreated={(c) => { remember(c); navigate(`/tutor/cohorts/${c.id}`); }} />
+      <CreateCohortModal open={open} onClose={() => setOpen(false)} onCreated={(c) => { remember(c); navigate(`/tutor/cohorts/${c.id}`); }} />
     </div>
   );
 }
 
-function CreateCohortModal({ open, onClose, courses, onCreated }) {
+/** Own courses plus organisation courses with an active engagement, as one picker list. */
+function useTeachableCourses(enabled) {
+  const mine = useQuery({ queryKey: tutorKeys.myCourses, queryFn: courseApi.listMine, enabled });
+  const engagements = useQuery({ queryKey: tutorKeys.engagements, queryFn: engagementApi.mine, enabled });
+  const items = useMemo(() => {
+    const own = (mine.data || []).map((c) => ({ id: c.courseId, slug: c.slug, title: c.title, status: String(c.status || '').toLowerCase(), engaged: false }));
+    const engaged = (engagements.data || [])
+      .filter((e) => String(e.status).toLowerCase() === 'active' && !own.some((c) => c.id === e.courseId))
+      .map((e) => ({ id: e.courseId, slug: e.courseSlug, title: e.courseTitle, organisationName: e.organisationName, status: 'published', engaged: true }));
+    return [...own, ...engaged];
+  }, [mine.data, engagements.data]);
+  return { items, isPending: mine.isPending || engagements.isPending, error: mine.error || engagements.error };
+}
+
+function CreateCohortModal({ open, onClose, onCreated }) {
+  const auth = useAuth();
   const { values, bind, set, reset } = useForm({ courseId: '', offeringId: '', name: '', startsAt: '', endsAt: '', capacity: 30, programmeId: '' });
+  const { items: courses, isPending, error } = useTeachableCourses(open);
   const course = courses.find((c) => c.id === values.courseId);
-  const cohortOfferings = (course?.offerings || []).filter((o) => o.format === 'cohort');
   const manualCourse = !course;
 
+  // Offerings come from the public course read (published or unpublished); drafts have no readable offerings yet.
+  const detail = useQuery({ queryKey: tutorKeys.course(course?.slug), queryFn: () => courseApi.bySlug(course.slug), enabled: Boolean(course?.slug), retry: false });
+  const cohortOfferings = (detail.data?.offerings || []).filter((o) => String(o.format).toLowerCase() === 'cohort');
+
   const create = useAction(
-    () => lmsApi.createCohort({ courseId: values.courseId.trim(), offeringId: values.offeringId.trim(), name: values.name.trim(), startsAt: toIso(values.startsAt), endsAt: toIso(values.endsAt), capacity: Number(values.capacity), programmeId: values.programmeId.trim() || null }),
+    () => lmsApi.createCohort({
+      courseId: values.courseId.trim(),
+      offeringId: values.offeringId.trim(),
+      name: values.name.trim(),
+      startsAt: toIso(values.startsAt),
+      endsAt: toIso(values.endsAt),
+      capacity: Number(values.capacity),
+      programmeId: values.programmeId.trim() || null,
+      tutorUserId: course?.engaged ? auth.me?.id : undefined,
+    }),
     {
       success: 'Cohort opened. Schedule its live classes next.',
       onSuccess: (res) => {
@@ -88,14 +119,14 @@ function CreateCohortModal({ open, onClose, courses, onCreated }) {
   const valid = /^[0-9a-f-]{36}$/i.test(values.courseId.trim()) && /^[0-9a-f-]{36}$/i.test(values.offeringId.trim()) && values.name.trim() && values.startsAt && values.endsAt && new Date(values.endsAt) > new Date(values.startsAt) && Number(values.capacity) > 0;
 
   return (
-    <Modal open={open} onClose={onClose} title="Open a cohort" description="Pick a published course of yours and its cohort-format offering." footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending} disabled={!valid} onClick={() => create.mutate()}>Open cohort</Button></>}>
-      <ErrorAlert error={create.error} className="mb-3" />
+    <Modal open={open} onClose={onClose} title="Open a cohort" description="Pick a published course you own or teach for an organisation, and its cohort-format offering." footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending} disabled={!valid} onClick={() => create.mutate()}>Open cohort</Button></>}>
+      <ErrorAlert error={create.error || error} className="mb-3" />
       <div className="space-y-4">
-        <Field label="Course" hint={courses.length ? 'Courses remembered on this device.' : 'No remembered courses: paste ids below.'}>
+        <Field label="Course" hint={isPending ? 'Loading your courses…' : courses.length ? 'Your own courses and organisation courses you are engaged on.' : 'No courses yet: paste ids below.'}>
           {(p) => (
             <Select {...p} value={course ? values.courseId : '__manual'} onChange={(e) => { set('courseId', e.target.value === '__manual' ? '' : e.target.value); set('offeringId', ''); }}>
               <option value="__manual">Enter ids manually…</option>
-              {courses.map((c) => <option key={c.id} value={c.id}>{c.title}{c.status !== 'published' ? ` (${c.status})` : ''}</option>)}
+              {courses.map((c) => <option key={c.id} value={c.id}>{c.title}{c.engaged ? ` (${c.organisationName || 'organisation'})` : c.status !== 'published' ? ` (${c.status})` : ''}</option>)}
             </Select>
           )}
         </Field>
@@ -105,15 +136,17 @@ function CreateCohortModal({ open, onClose, courses, onCreated }) {
             <Field label="Offering id" hint="A cohort-format offering." required>{(p) => <Input {...p} {...bind('offeringId')} className="font-mono text-sm" />}</Field>
           </FormGrid>
         ) : (
-          <Field label="Cohort offering" required hint={cohortOfferings.length ? undefined : 'This course has no cohort-format offering remembered here; add one in the builder or enter the id manually.'}>
+          <Field label="Cohort offering" required hint={detail.isPending ? 'Loading offerings…' : cohortOfferings.length ? undefined : detail.isError ? 'Offerings are readable once the course is published; enter the offering id manually until then.' : 'This course has no cohort-format offering; add one in the builder.'}>
             {(p) => (
               <Select {...p} {...bind('offeringId')}>
                 <option value="">Select…</option>
-                {cohortOfferings.map((o) => <option key={o.id} value={o.id}>Cohort · {o.capacity ? `${o.capacity} seats` : 'open'}{o.startAt ? ` · from ${formatDate(o.startAt)}` : ''}</option>)}
+                {cohortOfferings.map((o) => <option key={o.offeringId} value={o.offeringId}>Cohort · {o.capacity ? `${o.capacity} seats` : 'open'}{o.startAt ? ` · from ${formatDate(o.startAt)}` : ''}</option>)}
               </Select>
             )}
           </Field>
         )}
+        {course && !cohortOfferings.length && !detail.isPending ? <Field label="Offering id" required>{(p) => <Input {...p} {...bind('offeringId')} className="font-mono text-sm" placeholder="Paste the cohort offering id" />}</Field> : null}
+        {course?.engaged ? <Alert tone="info">You will be named as the teaching tutor on this cohort ({course.organisationName || 'organisation'} course).</Alert> : null}
         <Field label="Cohort name" required>{(p) => <Input {...p} {...bind('name')} placeholder="March 2027 evening cohort" />}</Field>
         <FormGrid cols={3}>
           <Field label="Starts" required>{(p) => <Input {...p} type="datetime-local" {...bind('startsAt')} />}</Field>

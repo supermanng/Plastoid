@@ -57,7 +57,7 @@ public class PayoutsTests(PlastoidsApiFactory factory)
         // No payout account yet → skipped; after a name-matched account → eligible.
         var staff = await factory.SignInAsStaffAsync();
         var queue = await staff.GetFromJsonAsync<JsonElement>("/api/v1/admin/payouts/queue", Json);
-        var row = queue.GetProperty("tutors").EnumerateArray().Single(t => t.GetProperty("tutorUserId").GetGuid() == tutorUserId);
+        var row = queue.GetProperty("tutors").EnumerateArray().Single(t => t.TryGetProperty("tutorUserId", out var tu) && tu.ValueKind == JsonValueKind.String && tu.GetGuid() == tutorUserId);
         row.GetProperty("skipReason").GetString().Should().Be("no_payout_account");
         var resolver = factory.Services.GetRequiredService<FakeBankAccountResolver>();
         var accountNumber = "01" + Random.Shared.Next(10_000_000, 99_999_999).ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -81,7 +81,7 @@ public class PayoutsTests(PlastoidsApiFactory factory)
         var drafted = await staff.PostAsync("/api/v1/admin/payouts/batches", null);
         drafted.StatusCode.Should().Be(HttpStatusCode.Created, await drafted.Content.ReadAsStringAsync());
         var draft = await drafted.Content.ReadFromJsonAsync<JsonElement>(Json);
-        draft.GetProperty("payouts").EnumerateArray().Single(p => p.GetProperty("tutorUserId").GetGuid() == tutorUserId).GetProperty("amount").GetProperty("amount").GetInt64().Should().Be(3_600_000);
+        draft.GetProperty("payouts").EnumerateArray().Single(p => p.TryGetProperty("tutorUserId", out var tu) && tu.ValueKind == JsonValueKind.String && tu.GetGuid() == tutorUserId).GetProperty("amount").GetProperty("amount").GetInt64().Should().Be(3_600_000);
         var draftId = draft.GetProperty("batchId").GetGuid();
         Key(staff);
         var selfApprove = await staff.PostAsync($"/api/v1/admin/payouts/batches/{draftId}/approve", null);
@@ -106,7 +106,7 @@ public class PayoutsTests(PlastoidsApiFactory factory)
         var submitted = await staff.PostAsync($"/api/v1/admin/payouts/batches/{batchId}/submit", null);
         submitted.StatusCode.Should().Be(HttpStatusCode.OK, await submitted.Content.ReadAsStringAsync());
         var batch = await staff.GetFromJsonAsync<JsonElement>($"/api/v1/admin/payouts/batches/{batchId}", Json);
-        var payout = batch.GetProperty("payouts").EnumerateArray().Single(p => p.GetProperty("tutorUserId").GetGuid() == tutorUserId);
+        var payout = batch.GetProperty("payouts").EnumerateArray().Single(p => p.TryGetProperty("tutorUserId", out var tu) && tu.ValueKind == JsonValueKind.String && tu.GetGuid() == tutorUserId);
         payout.GetProperty("status").GetString().Should().Be("submitted");
         var reference = payout.GetProperty("providerReference").GetString()!;
 

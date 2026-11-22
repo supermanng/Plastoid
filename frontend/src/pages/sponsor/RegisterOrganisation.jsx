@@ -11,9 +11,10 @@ const TYPES = [
   ['employer', 'Employer (hiring partner)'],
   ['institution', 'Institution (school, university)'],
   ['hub', 'Hub (training centre)'],
+  ['provider', 'Training provider: teaches, does not sponsor'],
 ];
 
-/** POST /identity/organisations → { organisationId, verificationStatus }. Sponsor/employer types grant the sponsor role. */
+/** POST /identity/organisations → { organisationId, verificationStatus }. Sponsor, employer and provider types grant the sponsor role (the organisation portal). */
 export default function RegisterOrganisation() {
   const auth = useAuth();
   const navigate = useNavigate();
@@ -75,7 +76,7 @@ export default function RegisterOrganisation() {
     <div className="mx-auto max-w-2xl">
       <PageHeader
         title="Register your organisation"
-        description="Sponsors fund seats on Plastoids programmes. We verify every organisation (CAC number and authorised signatory) before a campaign can be published."
+        description="Sponsors fund seats on Plastoids programmes; training providers publish courses taught by verified tutors. We verify every organisation (CAC number and authorised signatory) before a campaign or course can be published."
       />
       <Card>
         <div className="mb-4 flex items-center gap-3 text-sm text-muted">

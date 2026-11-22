@@ -10,7 +10,10 @@ public static class OrganisationRoles
     public const string Reviewer = "reviewer";
     public const string Viewer = "viewer";
 
-    public static readonly IReadOnlyCollection<string> All = [Owner, Finance, Reviewer, Viewer];
+    /// <summary>May create and edit the organisation's courses and engage tutors (ADR 0019). Owners can do the same.</summary>
+    public const string Author = "author";
+
+    public static readonly IReadOnlyCollection<string> All = [Owner, Finance, Reviewer, Viewer, Author];
 
     public static bool IsValid(string role) => All.Contains(role, StringComparer.Ordinal);
 }

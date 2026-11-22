@@ -25,8 +25,8 @@ internal sealed class CourseOutlineReader(CatalogueDbContext db, IUnitOfWork uni
 
         var outline = OutlineSnapshot.Deserialise(version.OutlineJson);
         var lessons = outline.OrderBy(m => m.Order).SelectMany(m => m.Lessons.OrderBy(l => l.Order).Select(l => new PublishedLesson(l.Id, m.Id, l.Type, l.Title, l.Order, l.DurationMinutes, l.IsPreview, l.PlaybackId, l.Content))).ToList();
-        var offerings = await db.Offerings.AsNoTracking().Where(o => o.CourseId == courseId && o.Active).Select(o => new PublishedOffering(o.Id, o.Format, o.DurationWeeks, o.Capacity, o.StartAt, o.Price, o.FundingTypes.Contains(FundingTypes.Sponsored))).ToListAsync(cancellationToken);
-        return new PublishedCourse(course.Id, course.Slug, course.Title, course.OwnerUserId, version.VersionNo, lessons, offerings);
+        var offerings = await db.Offerings.AsNoTracking().Where(o => o.CourseId == courseId && o.Active).Select(o => new PublishedOffering(o.Id, o.Format, o.DurationWeeks, o.Capacity, o.StartAt, o.Price, o.FundingTypes.Contains(FundingTypes.Sponsored), o.TutorUserId, o.EngagementId)).ToListAsync(cancellationToken);
+        return new PublishedCourse(course.Id, course.Slug, course.Title, course.OwnerUserId, version.VersionNo, lessons, offerings, course.OwnerTypeName, course.OrganisationId);
     }
 
     public async Task<Guid?> FindCourseForOfferingAsync(Guid offeringId, CancellationToken cancellationToken)

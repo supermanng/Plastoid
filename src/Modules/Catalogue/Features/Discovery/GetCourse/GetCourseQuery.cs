@@ -14,6 +14,9 @@ public sealed record ModuleView(Guid Id, string Title, int Order, IReadOnlyList<
 
 public sealed record ReviewView(int Rating, string Body, DateTime CreatedAt);
 
+/// <summary>The organisation that owns and sells the course (ADR 0019); absent on tutor courses.</summary>
+public sealed record ProviderView(Guid OrganisationId, string Name);
+
 public sealed record CourseDetail(
     Guid CourseId,
     string Slug,
@@ -24,6 +27,8 @@ public sealed record CourseDetail(
     string Category,
     IReadOnlyList<string> Skills,
     Guid OwnerId,
+    string OwnerType,
+    ProviderView? Provider,
     int VersionNo,
     DateTime? PublishedAt,
     int LessonCount,

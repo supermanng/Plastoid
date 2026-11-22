@@ -31,7 +31,7 @@ internal sealed class PaymentProcessing(PaymentsDbContext db, ILedgerService led
 
         intent.MarkSucceeded(gatewayFee, paidAt, entry.Value);
         db.Transactions.Add(PaymentTransaction.Record(intent.TenantId, intent.Id, TransactionKinds.Charge, intent.Amount, gatewayFee, intent.GatewayReference, paidAt, entry.Value));
-        outbox.Enqueue(new PaymentSucceeded(intent.Id, intent.Id, intent.PayerId, intent.Purpose, intent.ReferenceId, intent.Amount, intent.PayeeUserId, intent.PayeeNet));
+        outbox.Enqueue(Succeeded(intent));
         return true;
     }
 
@@ -51,9 +51,12 @@ internal sealed class PaymentProcessing(PaymentsDbContext db, ILedgerService led
 
         intent.MarkSucceeded(Money.Zero(intent.Amount.Currency), paidAt, entry.Value);
         db.Transactions.Add(PaymentTransaction.Record(intent.TenantId, intent.Id, TransactionKinds.Charge, intent.Amount, Money.Zero(intent.Amount.Currency), intent.GatewayReference, paidAt, entry.Value));
-        outbox.Enqueue(new PaymentSucceeded(intent.Id, intent.Id, intent.PayerId, intent.Purpose, intent.ReferenceId, intent.Amount, intent.PayeeUserId, intent.PayeeNet));
+        outbox.Enqueue(Succeeded(intent));
         return true;
     }
+
+    private static PaymentSucceeded Succeeded(PaymentIntent intent)
+        => new(intent.Id, intent.Id, intent.PayerId, intent.Purpose, intent.ReferenceId, intent.Amount, intent.PayeeUserId, intent.PayeeNet, intent.PayeeType, intent.PayeeOrganisationId, intent.TutorShare);
 
     public void Fail(PaymentIntent intent, string reason)
     {

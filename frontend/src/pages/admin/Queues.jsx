@@ -5,7 +5,7 @@ import { Alert, Button, Card, EmptyState, Field, Input, Loading, PageHeader, Sta
 import { formatDateTime, formatMoney, koboOf, relativeTime } from '../../lib/format';
 import { useAction, useQueryParams } from '../../lib/hooks';
 import { adminApi, adminKeys, FOUR_EYES_REFUND_KOBO } from '../../api/admin';
-import { AdminError, DecisionDialog, FourEyesNote, Id, useIsMaker, UserLink } from './_shared';
+import { AdminError, DecisionDialog, FourEyesNote, Id, useIsMaker, UserLink, PayeeLink } from './_shared';
 
 const DEFAULTS = { tab: 'verification' };
 const TABS = [
@@ -229,7 +229,7 @@ function DisputeQueue() {
             rows={holds}
             rowKey={(r) => r.holdId}
             columns={[
-              { key: 'tutorUserId', header: 'Tutor', render: (r) => <UserLink id={r.tutorUserId} /> },
+              { key: 'payee', header: 'Payee', render: (r) => <PayeeLink row={r} /> },
               { key: 'reason', header: 'Reason' },
               { key: 'placedBy', header: 'Placed by', render: (r) => <><UserLink id={r.placedBy} /><div className="text-[11px] text-muted">{formatDateTime(r.placedAt)}</div></> },
               { key: 'releasesAt', header: 'Auto-release', render: (r) => <span className={`text-xs ${r.overdue ? 'font-semibold text-danger' : 'text-muted'}`}>{formatDateTime(r.releasesAt)}{r.overdue ? ' · overdue' : ''}</span> },
@@ -260,7 +260,7 @@ function DisputeQueue() {
         open={Boolean(hold)}
         onClose={() => setHold(null)}
         title="Release payout hold"
-        description={hold ? `Tutor ${hold.tutorUserId} · ${hold.reason}` : ''}
+        description={hold ? `${hold.payeeType === 'organisation' ? 'Organisation' : 'Tutor'} ${hold.payeeId || hold.tutorUserId} · ${hold.reason}` : ''}
         options={[{ value: 'released', label: 'Release hold', tone: 'teal' }]}
         noteLabel="Resolution"
         noteRequiredFor={['released']}

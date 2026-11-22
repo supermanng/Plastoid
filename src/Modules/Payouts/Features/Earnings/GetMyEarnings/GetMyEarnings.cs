@@ -8,10 +8,10 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Plastoids.Infrastructure.Http;
 using Plastoids.Infrastructure.Security;
+using Plastoids.Modules.Payments.Contracts;
 using Plastoids.Modules.Payouts.Persistence;
 using Plastoids.Modules.Payouts.Services;
 using Plastoids.SharedKernel.Cqrs;
-using Plastoids.SharedKernel.Domain;
 using Plastoids.SharedKernel.Results;
 using Plastoids.SharedKernel.Tenancy;
 using Plastoids.SharedKernel.Time;
@@ -19,11 +19,7 @@ using Plastoids.SharedKernel.Time;
 namespace Plastoids.Modules.Payouts.Features.Earnings.GetMyEarnings;
 
 /// <summary>Story G3: gross, commission, net, held, pending, paid and what the next run would pay.</summary>
-public sealed record GetMyEarningsQuery : IQuery<MyEarningsView>;
-
-public sealed record PayoutView(Guid PayoutId, string Status, Money Amount, string AccountNumberMasked, string? BankReference, DateTime CreatedAt, DateTime? SettledAt, string? FailureReason);
-
-public sealed record MyEarningsView(Money Gross, Money Commission, Money Net, Money Held, Money Available, Money Pending, Money Paid, bool DisputeHold, IReadOnlyList<PayoutView> RecentPayouts);
+public sealed record GetMyEarningsQuery : IQuery<EarningsStatementView>;
 
 /// <summary>DownloadStatement: CSV of earnings and payouts in a date range.</summary>
 public sealed record DownloadStatementQuery(DateOnly From, DateOnly To) : IQuery<StatementFile>;
@@ -42,16 +38,10 @@ internal sealed class DownloadStatementValidator : AbstractValidator<DownloadSta
     }
 }
 
-internal sealed class GetMyEarningsHandler(PayoutsDbContext db, PayableCalculator calculator, ICurrentUser currentUser, IClock clock) : IQueryHandler<GetMyEarningsQuery, MyEarningsView>
+internal sealed class GetMyEarningsHandler(EarningsStatements statements, ICurrentUser currentUser, IClock clock) : IQueryHandler<GetMyEarningsQuery, EarningsStatementView>
 {
-    public async Task<Result<MyEarningsView>> Handle(GetMyEarningsQuery request, CancellationToken cancellationToken)
-    {
-        var tutor = currentUser.UserId ?? Guid.Empty;
-        var summary = await calculator.SummariseAsync(tutor, clock.UtcNow, cancellationToken);
-        var recent = await db.Payouts.AsNoTracking().Where(p => p.TutorUserId == tutor).OrderByDescending(p => p.CreatedAt).Take(20).ToListAsync(cancellationToken);
-        return new MyEarningsView(summary.Gross, summary.Commission, summary.Net, summary.Held, summary.Payable, summary.Pending, summary.Paid, summary.DisputeHold,
-            recent.Select(p => new PayoutView(p.Id, p.Status.ToString().ToLowerInvariant(), p.Amount, p.AccountNumberMasked, p.BankReference, p.CreatedAt, p.SettledAt, p.FailureReason)).ToList());
-    }
+    public async Task<Result<EarningsStatementView>> Handle(GetMyEarningsQuery request, CancellationToken cancellationToken)
+        => await statements.BuildAsync(PayeeTypes.Tutor, currentUser.UserId ?? Guid.Empty, clock.UtcNow, cancellationToken);
 }
 
 internal sealed class DownloadStatementHandler(PayoutsDbContext db, ICurrentUser currentUser) : IQueryHandler<DownloadStatementQuery, StatementFile>
@@ -61,8 +51,8 @@ internal sealed class DownloadStatementHandler(PayoutsDbContext db, ICurrentUser
         var tutor = currentUser.UserId ?? Guid.Empty;
         var from = request.From.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var to = request.To.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var earnings = await db.Earnings.AsNoTracking().Where(e => e.TutorUserId == tutor && e.EarnedAt >= from && e.EarnedAt < to).OrderBy(e => e.EarnedAt).ToListAsync(cancellationToken);
-        var payouts = await db.Payouts.AsNoTracking().Where(p => p.TutorUserId == tutor && p.CreatedAt >= from && p.CreatedAt < to).OrderBy(p => p.CreatedAt).ToListAsync(cancellationToken);
+        var earnings = await db.Earnings.AsNoTracking().Where(e => e.PayeeType == PayeeTypes.Tutor && e.PayeeId == tutor && e.EarnedAt >= from && e.EarnedAt < to).OrderBy(e => e.EarnedAt).ToListAsync(cancellationToken);
+        var payouts = await db.Payouts.AsNoTracking().Where(p => p.PayeeType == PayeeTypes.Tutor && p.PayeeId == tutor && p.CreatedAt >= from && p.CreatedAt < to).OrderBy(p => p.CreatedAt).ToListAsync(cancellationToken);
         var inv = CultureInfo.InvariantCulture;
         var sb = new StringBuilder("date,type,source,status,gross_kobo,commission_kobo,net_kobo,refunded_kobo,amount_kobo,reference\n");
         foreach (var e in earnings)

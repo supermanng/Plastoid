@@ -1,3 +1,4 @@
+using Plastoids.Modules.Catalogue.Contracts;
 using Plastoids.Modules.Catalogue.Domain;
 using Plastoids.SharedKernel.Domain;
 using Plastoids.SharedKernel.Tenancy;
@@ -96,5 +97,120 @@ public class CatalogueDomainTests
         a.MarkReady("pb_1", 600, "240p,480p,720p");
         a.Status.Should().Be(MediaStatus.Ready);
         a.PlaybackId.Should().Be("pb_1");
+    }
+
+    [Fact]
+    public void Organisation_course_is_owned_by_the_organisation_and_publishes_with_its_own_verification_code()
+    {
+        var organisationId = Guid.NewGuid();
+        var author = Guid.NewGuid();
+        var c = Course.CreateForOrganisation(Tenants.Marketplace, organisationId, author, "Cloud Fundamentals for Teams", "Summary", CourseLevels.Beginner, "en", "cloud", ["aws"], "org001");
+        c.OwnerType.Should().Be(CourseOwnerType.Organisation);
+        c.IsOrganisationOwned.Should().BeTrue();
+        c.OwnerTypeName.Should().Be(CourseOwnerTypes.Organisation);
+        c.OwnerId.Should().Be(organisationId);
+        c.OrganisationId.Should().Be(organisationId);
+        c.OwnerUserId.Should().Be(author);
+        c.Submit(Now);
+        c.RecordReview(true, null);
+        c.Publish(false, Now).Error.Code.Should().Be("organisation_not_verified");
+        c.Publish(true, Now).Value.Should().Be(1);
+        Draft().OwnerNotVerified().Code.Should().Be("tutor_not_verified");
+    }
+
+    [Fact]
+    public void Offering_assigns_an_engaged_tutor()
+    {
+        var o = Offering.Create(Tenants.Marketplace, Guid.NewGuid(), OfferingFormats.Cohort, Money.NairaAmount(45_000), ["self"], 30, Now.AddDays(10), 8, Now).Value;
+        o.TutorUserId.Should().BeNull();
+        var tutor = Guid.NewGuid();
+        var engagement = Guid.NewGuid();
+        o.AssignTutor(tutor, engagement);
+        o.TutorUserId.Should().Be(tutor);
+        o.EngagementId.Should().Be(engagement);
+    }
+
+    [Fact]
+    public void Engagement_validates_terms_on_offer()
+    {
+        Engagement.Offer(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new EngagementTerms("hourly", 0, null), null, Guid.NewGuid(), Now).Error.Code.Should().Be("engagement_terms_invalid");
+        Engagement.Offer(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new EngagementTerms(EngagementTermKinds.RevenueShare, 0, null), null, Guid.NewGuid(), Now).Error.Code.Should().Be("engagement_share_invalid");
+        Engagement.Offer(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new EngagementTerms(EngagementTermKinds.RevenueShare, 10_001, null), null, Guid.NewGuid(), Now).Error.Code.Should().Be("engagement_share_invalid");
+        Engagement.Offer(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new EngagementTerms(EngagementTermKinds.PerEnrolment, 0, null), null, Guid.NewGuid(), Now).Error.Code.Should().Be("engagement_fee_invalid");
+        Engagement.Offer(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new EngagementTerms(EngagementTermKinds.PerEnrolment, 0, Money.Zero()), null, Guid.NewGuid(), Now).Error.Code.Should().Be("engagement_fee_invalid");
+        Engagement.Offer(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new EngagementTerms(EngagementTermKinds.PerEnrolment, 0, new Money(500, "USD")), null, Guid.NewGuid(), Now).Error.Code.Should().Be("engagement_fee_invalid");
+
+        var perEnrolment = Engagement.Offer(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new EngagementTerms(EngagementTermKinds.PerEnrolment, 9_999, Money.NairaAmount(5_000)), "  Welcome aboard ", Guid.NewGuid(), Now).Value;
+        perEnrolment.ShareBps.Should().Be(0, "per_enrolment ignores shareBps");
+        perEnrolment.FixedFee.Should().Be(Money.NairaAmount(5_000));
+        perEnrolment.Note.Should().Be("Welcome aboard");
+        perEnrolment.ToTerms().Should().Be(new EngagementTerms(EngagementTermKinds.PerEnrolment, 0, Money.NairaAmount(5_000)));
+
+        var revenueShare = Engagement.Offer(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new EngagementTerms(EngagementTermKinds.RevenueShare, 4_000, Money.NairaAmount(1)), null, Guid.NewGuid(), Now).Value;
+        revenueShare.FixedFee.Should().BeNull("revenue_share ignores fixedFee");
+        revenueShare.ToTerms().Should().Be(new EngagementTerms(EngagementTermKinds.RevenueShare, 4_000, null));
+    }
+
+    [Fact]
+    public void Engagement_moves_offered_to_active_to_ended_and_rejects_other_transitions()
+    {
+        var e = Engagement.Offer(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new EngagementTerms(EngagementTermKinds.RevenueShare, 4_000, null), "Teach the Jan cohort", Guid.NewGuid(), Now).Value;
+        e.Status.Should().Be(EngagementStatus.Offered);
+        e.IsOpen.Should().BeTrue();
+        e.OfferedAt.Should().Be(Now);
+        e.End("too early", Now).Error.Code.Should().Be("engagement_not_active");
+
+        e.Accept(null, Now.AddHours(1)).IsSuccess.Should().BeTrue();
+        e.Status.Should().Be(EngagementStatus.Active);
+        e.RespondedAt.Should().Be(Now.AddHours(1));
+        e.Note.Should().Be("Teach the Jan cohort", "an empty response note keeps the offer note");
+        e.Accept(null, Now).Error.Code.Should().Be("engagement_not_offered");
+        e.Decline(null, Now).Error.Code.Should().Be("engagement_not_offered");
+
+        e.End("Cohort finished", Now.AddDays(90)).IsSuccess.Should().BeTrue();
+        e.Status.Should().Be(EngagementStatus.Ended);
+        e.IsOpen.Should().BeFalse();
+        e.EndedAt.Should().Be(Now.AddDays(90));
+        e.EndReason.Should().Be("Cohort finished");
+        e.End(null, Now).Error.Code.Should().Be("engagement_not_active");
+    }
+
+    [Fact]
+    public void Engagement_can_be_declined_with_a_note()
+    {
+        var e = Engagement.Offer(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new EngagementTerms(EngagementTermKinds.RevenueShare, 2_500, null), null, Guid.NewGuid(), Now).Value;
+        e.Decline("Fully booked this quarter", Now).IsSuccess.Should().BeTrue();
+        e.Status.Should().Be(EngagementStatus.Declined);
+        e.Note.Should().Be("Fully booked this quarter");
+        e.IsOpen.Should().BeFalse();
+        e.Accept(null, Now).Error.Code.Should().Be("engagement_not_offered");
+    }
+
+    [Fact]
+    public void Revenue_share_rounds_half_kobo_to_even_and_never_exceeds_the_net()
+    {
+        var share = new EngagementTerms(EngagementTermKinds.RevenueShare, 4_000, null);
+        share.TutorShareOf(Money.NairaAmount(38_250)).Should().Be(Money.NairaAmount(15_300));
+        // 3 825 001 kobo × 40 % = 1 530 000.4 → 1 530 000; 3 825 005 × 40 % = 1 530 002.0 (exact).
+        share.TutorShareOf(Money.Kobo(3_825_001)).Should().Be(Money.Kobo(1_530_000));
+        // 25 bps of 1 kobo = 0.0025 → 0; 3 333 bps of 15 kobo = 4.9995 → 5.
+        new EngagementTerms(EngagementTermKinds.RevenueShare, 25, null).TutorShareOf(Money.Kobo(1)).Should().Be(Money.Zero());
+        new EngagementTerms(EngagementTermKinds.RevenueShare, 3_333, null).TutorShareOf(Money.Kobo(15)).Should().Be(Money.Kobo(5));
+        // Exactly half a kobo rounds to even: 5 000 bps of 1 kobo = 0.5 → 0; of 3 kobo = 1.5 → 2.
+        new EngagementTerms(EngagementTermKinds.RevenueShare, 5_000, null).TutorShareOf(Money.Kobo(1)).Should().Be(Money.Zero());
+        new EngagementTerms(EngagementTermKinds.RevenueShare, 5_000, null).TutorShareOf(Money.Kobo(3)).Should().Be(Money.Kobo(2));
+        new EngagementTerms(EngagementTermKinds.RevenueShare, 10_000, null).TutorShareOf(Money.NairaAmount(100)).Should().Be(Money.NairaAmount(100));
+    }
+
+    [Fact]
+    public void Per_enrolment_fee_is_capped_at_the_net_and_zero_net_pays_nothing()
+    {
+        var fee = new EngagementTerms(EngagementTermKinds.PerEnrolment, 0, Money.NairaAmount(5_000));
+        fee.TutorShareOf(Money.NairaAmount(38_250)).Should().Be(Money.NairaAmount(5_000));
+        fee.TutorShareOf(Money.NairaAmount(3_000)).Should().Be(Money.NairaAmount(3_000), "the fee is capped at the sale net of commission");
+        fee.TutorShareOf(Money.Zero()).Should().Be(Money.Zero());
+        fee.TutorShareOf(Money.Kobo(-100)).Should().Be(Money.Zero());
+        new EngagementTerms(EngagementTermKinds.PerEnrolment, 0, null).TutorShareOf(Money.NairaAmount(10)).Should().Be(Money.Zero(), "no fee means no share");
+        new EngagementTerms(EngagementTermKinds.RevenueShare, 4_000, null).TutorShareOf(Money.Zero()).Should().Be(Money.Zero());
     }
 }

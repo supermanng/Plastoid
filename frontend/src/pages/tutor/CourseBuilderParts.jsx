@@ -142,9 +142,15 @@ export function QuizModal({ open, onClose, courseId, moduleId, nextOrder, onCrea
 
 /* ---------------------------------------------------------------- Offerings */
 
-export function OfferingsPanel({ course, onChange }) {
+/**
+ * `tutors` (organisation courses only, ADR 0019): active engagements as [{ tutorUserId, label }]. The engaged tutor who
+ * teaches is fixed at the offering: required for cohort and one-to-one formats, optional for self-paced.
+ */
+export function OfferingsPanel({ course, onChange, tutors, readOnly = false }) {
   const [open, setOpen] = useState(false);
-  const { values, bind, set, reset } = useForm({ format: 'self_paced', priceNaira: '', fundingTypes: ['self'], capacity: '', startAt: '', durationWeeks: '' });
+  const { values, bind, set, reset } = useForm({ format: 'self_paced', priceNaira: '', fundingTypes: ['self'], capacity: '', startAt: '', durationWeeks: '', tutorUserId: '' });
+  const organisationCourse = Array.isArray(tutors);
+  const tutorRequired = organisationCourse && values.format !== 'self_paced';
 
   const create = useAction(
     () => courseApi.addOffering(course.id, {
@@ -154,11 +160,12 @@ export function OfferingsPanel({ course, onChange }) {
       capacity: values.format === 'cohort' && values.capacity ? Number(values.capacity) : null,
       startAt: values.format === 'cohort' ? toIso(values.startAt) : null,
       durationWeeks: values.format === 'cohort' && values.durationWeeks ? Number(values.durationWeeks) : null,
+      tutorUserId: organisationCourse && values.tutorUserId ? values.tutorUserId : undefined,
     }),
     {
       success: 'Offering added.',
       onSuccess: (res) => {
-        onChange({ offerings: [...(course.offerings || []), { id: res.offeringId, format: res.format, price: res.price, fundingTypes: values.fundingTypes, capacity: values.capacity ? Number(values.capacity) : null, startAt: toIso(values.startAt), durationWeeks: values.durationWeeks ? Number(values.durationWeeks) : null }] });
+        onChange({ offerings: [...(course.offerings || []), { id: res.offeringId, format: res.format, price: res.price, fundingTypes: values.fundingTypes, capacity: values.capacity ? Number(values.capacity) : null, startAt: toIso(values.startAt), durationWeeks: values.durationWeeks ? Number(values.durationWeeks) : null, tutorUserId: values.tutorUserId || null }] });
         reset();
         setOpen(false);
       },
@@ -167,10 +174,12 @@ export function OfferingsPanel({ course, onChange }) {
 
   const toggleFunding = (f) => set('fundingTypes', values.fundingTypes.includes(f) ? values.fundingTypes.filter((x) => x !== f) : [...values.fundingTypes, f]);
   const offerings = course.offerings || [];
+  const tutorLabel = (userId) => (tutors || []).find((t) => t.tutorUserId === userId)?.label || (userId ? `Tutor ${String(userId).slice(0, 8)}` : null);
+  const valid = values.priceNaira !== '' && values.fundingTypes.length > 0 && !(values.format === 'cohort' && !values.startAt) && !(tutorRequired && !values.tutorUserId);
 
   return (
     <Card>
-      <CardHeader title="Offerings" description="How the course is sold: self-paced access, a dated cohort with live classes, or one-to-one delivery. Sponsors can only fund offerings that accept sponsorship." action={<Button size="sm" variant="secondary" icon={Plus} onClick={() => setOpen(true)}>Add offering</Button>} />
+      <CardHeader title="Offerings" description={organisationCourse ? 'How the course is sold, and which engaged tutor teaches it. Cohort and one-to-one offerings need a teaching tutor.' : 'How the course is sold: self-paced access, a dated cohort with live classes, or one-to-one delivery. Sponsors can only fund offerings that accept sponsorship.'} action={readOnly ? null : <Button size="sm" variant="secondary" icon={Plus} onClick={() => setOpen(true)}>Add offering</Button>} />
       {offerings.length === 0 ? <p className="text-sm text-muted">No offerings yet. A course needs at least one before it can be published.</p> : (
         <ul className="divide-y divide-line">
           {offerings.map((o) => (
@@ -178,6 +187,7 @@ export function OfferingsPanel({ course, onChange }) {
               <div>
                 <span className="font-semibold text-navy">{(OFFERING_FORMATS.find(([v]) => v === o.format) || [])[1] || o.format}</span>
                 <span className="text-muted"> · {formatMoney(o.price)}{o.capacity ? ` · ${o.capacity} seats` : ''}{o.startAt ? ` · starts ${formatDate(o.startAt)}` : ''}{o.durationWeeks ? ` · ${o.durationWeeks} weeks` : ''}</span>
+                {organisationCourse ? <div className="text-xs text-muted">{o.tutorUserId ? `Taught by ${tutorLabel(o.tutorUserId)}` : 'No teaching tutor set'}</div> : null}
               </div>
               <div className="flex gap-1">{(o.fundingTypes || []).map((f) => <StatusPill key={f} status={f} tone={f === 'sponsored' ? 'success' : 'neutral'} label={(FUNDING_TYPES.find(([v]) => v === f) || [])[1] || f} />)}</div>
             </li>
@@ -185,13 +195,23 @@ export function OfferingsPanel({ course, onChange }) {
         </ul>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Add an offering" footer={<><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button loading={create.isPending} disabled={values.priceNaira === '' || values.fundingTypes.length === 0 || (values.format === 'cohort' && !values.startAt)} onClick={() => create.mutate()}>Add offering</Button></>}>
+      <Modal open={open} onClose={() => setOpen(false)} title="Add an offering" footer={<><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button loading={create.isPending} disabled={!valid} onClick={() => create.mutate()}>Add offering</Button></>}>
         <ErrorAlert error={create.error} className="mb-3" />
         <div className="space-y-4">
           <FormGrid>
             <Field label="Format">{(p) => <Select {...p} {...bind('format')}>{OFFERING_FORMATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>}</Field>
             <Field label="Price (₦)" hint="0 for free." required>{(p) => <Input {...p} inputMode="numeric" {...bind('priceNaira')} />}</Field>
           </FormGrid>
+          {organisationCourse ? (
+            <Field label="Teaching tutor" required={tutorRequired} hint={tutors.length ? (tutorRequired ? 'An engaged tutor must teach cohort and one-to-one offerings.' : 'Optional for self-paced courses.') : 'No active engagements yet: engage a tutor from the Tutors page first.'} error={tutorRequired && !tutors.length ? 'Engage a tutor before adding this offering.' : undefined}>
+              {(p) => (
+                <Select {...p} {...bind('tutorUserId')} disabled={!tutors.length}>
+                  <option value="">{tutorRequired ? 'Select a tutor…' : 'No tutor (self-paced)'}</option>
+                  {tutors.map((t) => <option key={t.tutorUserId} value={t.tutorUserId}>{t.label}</option>)}
+                </Select>
+              )}
+            </Field>
+          ) : null}
           {values.format === 'cohort' ? (
             <FormGrid cols={3}>
               <Field label="Starts" required>{(p) => <Input {...p} type="datetime-local" {...bind('startAt')} />}</Field>

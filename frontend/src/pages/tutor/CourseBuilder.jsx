@@ -1,73 +1,103 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, CheckCircle2, FileText, ListChecks, Plus, Send, Trash2, Upload, Video, XCircle } from 'lucide-react';
-import { Alert, Breadcrumb, Button, Card, CardHeader, EmptyState, ErrorAlert, Field, FormGrid, Input, StatusPill, Textarea, useToast } from '../../components/ui';
+import { Alert, Breadcrumb, Button, Card, CardHeader, EmptyState, ErrorAlert, Field, FormGrid, Input, Loading, StatusPill, Textarea, useToast } from '../../components/ui';
 import { useAction, useForm } from '../../lib/hooks';
 import { formatDateTime } from '../../lib/format';
 import { courseApi, tutorKeys } from '../../api/tutor';
-import { splitList, uploadToPresignedUrl, useRememberedCourses } from './shared';
+import { splitList, uploadToPresignedUrl } from './shared';
 import { LessonModal, OfferingsPanel, QuizModal } from './CourseBuilderParts';
 
 /*
- * /tutor/courses/:courseId — lesson builder.
- * The server exposes no draft read, so the builder keeps the course record it knows (localStorage via useRememberedCourses)
- * and updates it from every mutation response. For published/unpublished courses GET /catalogue/courses/{slug} refreshes it.
+ * /tutor/courses/:courseId — lesson builder for the tutor's own courses. The organisation portal renders the same
+ * <AuthoringEditor> for organisation courses (/sponsor/courses/:courseId).
  *
+ * GET  /catalogue/courses/{id}/authoring                       draft outline: course fields, status, modules[lessons], offerings
  * PUT  /catalogue/courses/{id}/outline                         metadata + ordered modules (ids come back for new ones)
  * POST /catalogue/courses/{id}/modules/{moduleId}/lessons      video | doc | assignment | live
  * POST /catalogue/courses/{id}/modules/{moduleId}/quizzes      MCQ quiz
  * POST /catalogue/lessons/{lessonId}/video                     direct-upload URL
- * POST /catalogue/courses/{id}/offerings                       self_paced | cohort | one_to_one
+ * POST /catalogue/courses/{id}/offerings                       self_paced | cohort | one_to_one (+ tutorUserId on organisation courses)
  * POST /catalogue/courses/{id}/submit · /publish
  */
 export default function CourseBuilder() {
   const { courseId } = useParams();
-  const toast = useToast();
-  const { items, remember } = useRememberedCourses();
-  const course = items.find((c) => c.id === courseId);
+  return <AuthoringEditor courseId={courseId} basePath="/tutor/courses" listLabel="My courses" />;
+}
 
-  const remote = useQuery({
-    queryKey: tutorKeys.course(course?.slug),
-    queryFn: () => courseApi.bySlug(course.slug),
-    enabled: Boolean(course?.slug) && ['published', 'unpublished', 'approved'].includes(course?.status),
-    retry: false,
+/** Normalise the authoring view (and tolerate the public CourseDetail field names) into the shape the builder edits. */
+export function normaliseAuthoring(v) {
+  if (!v) return null;
+  const modules = v.modules || v.outline || [];
+  const offerings = v.offerings || [];
+  return {
+    id: v.courseId || v.id,
+    slug: v.slug,
+    title: v.title,
+    summary: v.summary,
+    level: v.level,
+    language: v.language,
+    category: v.category,
+    skills: v.skills || [],
+    status: String(v.status || (v.publishedAt ? 'published' : 'draft')).toLowerCase(),
+    ownerType: v.ownerType,
+    organisationId: v.organisationId,
+    publishedAt: v.publishedAt,
+    updatedAt: v.updatedAt,
+    versionNo: v.currentVersionNo ?? v.versionNo,
+    modules: modules
+      .slice()
+      .sort((a, b) => a.order - b.order)
+      .map((m) => ({
+        id: m.id || m.moduleId,
+        title: m.title,
+        order: m.order,
+        lessons: (m.lessons || [])
+          .slice()
+          .sort((a, b) => a.order - b.order)
+          .map((l) => ({ id: l.id || l.lessonId, type: String(l.type || '').toLowerCase(), title: l.title, order: l.order, durationMinutes: l.durationMinutes, isPreview: l.isPreview, videoStatus: l.videoStatus || l.mediaStatus || (l.mediaAssetId ? 'uploaded' : undefined), mediaAssetId: l.mediaAssetId })),
+      })),
+    offerings: offerings.map((o) => ({ id: o.offeringId || o.id, format: o.format, price: o.price, fundingTypes: o.fundingTypes || [], capacity: o.capacity, startAt: o.startAt, durationWeeks: o.durationWeeks, tutorUserId: o.tutorUserId, engagementId: o.engagementId })),
+  };
+}
+
+/**
+ * The builder proper. `tutors` (organisation courses only) is the list of active engagements { tutorUserId, label }
+ * offered in the offering form's "Teaching tutor" select; `aside` renders extra cards in the right column.
+ */
+export function AuthoringEditor({ courseId, basePath, listLabel = 'Courses', tutors, aside, readOnly = false }) {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const key = tutorKeys.authoring(courseId);
+  const query = useQuery({
+    queryKey: key,
+    queryFn: async () => normaliseAuthoring(await courseApi.authoring(courseId)),
+    refetchOnWindowFocus: false, // unsaved module edits live in the page; do not reset them on focus
   });
 
-  // Merge the server's view (outline, offerings) into the remembered record when it is readable.
-  useEffect(() => {
-    if (!remote.data || !course) return;
-    const r = remote.data;
-    remember({
-      id: r.courseId,
-      slug: r.slug,
-      title: r.title,
-      summary: r.summary,
-      level: r.level,
-      language: r.language,
-      category: r.category,
-      skills: r.skills,
-      status: r.publishedAt ? 'published' : course.status,
-      publishedAt: r.publishedAt,
-      versionNo: r.versionNo,
-      modules: r.outline.map((m) => ({ id: m.id, title: m.title, order: m.order, lessons: m.lessons.map((l) => ({ id: l.id, type: l.type, title: l.title, order: l.order, durationMinutes: l.durationMinutes, isPreview: l.isPreview })) })),
-      offerings: r.offerings.map((o) => ({ id: o.offeringId, format: o.format, price: o.price, fundingTypes: o.fundingTypes, capacity: o.capacity, startAt: o.startAt, durationWeeks: o.durationWeeks })),
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remote.data]);
-
-  if (!course) {
+  if (query.isPending) return <Loading />;
+  if (query.isError) {
+    const status = query.error?.status;
     return (
-      <EmptyState
-        icon={FileText}
-        title="Course not on this device"
-        description="Drafts are only readable from the browser that created them. If the course is published, find it by slug."
-        action={<Button to="/tutor/courses">Back to my courses</Button>}
-      />
+      <div>
+        <Breadcrumb items={[{ to: basePath, label: listLabel }, { label: 'Course' }]} />
+        <div className="mt-4">
+          {status === 404 || status === 403 ? (
+            <EmptyState icon={FileText} title={status === 403 ? 'You cannot edit this course' : 'Course not found'} description={status === 403 ? 'Only the course owner, or an owner or author of the owning organisation, can open the builder.' : 'The course may have been removed, or the link is old.'} action={<Button to={basePath}>Back to {listLabel.toLowerCase()}</Button>} />
+          ) : <ErrorAlert error={query.error} />}
+        </div>
+      </div>
     );
   }
 
-  const update = (patch) => remember({ ...course, ...patch });
+  const course = query.data;
+  // Apply what a mutation returned straight away, then reconcile with the server's authoring view
+  // (skipped for upload progress the view may not carry yet).
+  const update = (patch, { reconcile = true } = {}) => {
+    qc.setQueryData(key, (prev) => ({ ...(prev || course), ...patch }));
+    if (reconcile) qc.invalidateQueries({ queryKey: key });
+  };
   const modules = course.modules || [];
   const lessonCount = modules.reduce((n, m) => n + (m.lessons?.length || 0), 0);
   const hasQuiz = modules.some((m) => m.lessons?.some((l) => l.type === 'quiz'));
@@ -81,9 +111,9 @@ export default function CourseBuilder() {
 
   return (
     <div>
-      <Breadcrumb items={[{ to: '/tutor/courses', label: 'My courses' }, { label: course.title }]} />
+      <Breadcrumb items={[{ to: basePath, label: listLabel }, { label: course.title }]} />
       <header className="mb-6 mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl">{course.title}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
             <StatusPill status={course.status || 'draft'} />
@@ -93,21 +123,21 @@ export default function CourseBuilder() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {course.status === 'published' ? <Button to={`/tutor/courses/${course.id}/gradebook`} variant="secondary">Gradebook</Button> : null}
+          {course.status === 'published' && basePath === '/tutor/courses' ? <Button to={`${basePath}/${course.id}/gradebook`} variant="secondary">Gradebook</Button> : null}
           {course.slug && course.status === 'published' ? <Button to={`/courses/${course.slug}`} variant="ghost">View as learner</Button> : null}
         </div>
       </header>
 
-      {remote.isError && remote.error?.status !== 404 ? <ErrorAlert error={remote.error} className="mb-4" /> : null}
+      {readOnly ? <Alert tone="info" className="mb-4">You can view this course but not change it: only an owner or author of the organisation can edit courses.</Alert> : null}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <MetadataCard course={course} onSaved={update} />
-          <ModulesCard course={course} onChange={update} />
-          <OfferingsPanel course={course} onChange={update} />
+          <MetadataCard course={course} onSaved={update} readOnly={readOnly} />
+          <ModulesCard course={course} onChange={update} readOnly={readOnly} />
+          <OfferingsPanel course={course} onChange={update} tutors={tutors} readOnly={readOnly} />
         </div>
         <div className="space-y-6">
-          <PublishCard course={course} blockers={blockers} onChange={update} toast={toast} />
+          {readOnly ? null : <PublishCard course={course} blockers={blockers} onChange={update} toast={toast} />}
           <Card>
             <CardHeader title="Checklist" />
             <ul className="space-y-2 text-sm">
@@ -125,6 +155,7 @@ export default function CourseBuilder() {
               ))}
             </ul>
           </Card>
+          {aside}
         </div>
       </div>
     </div>
@@ -133,7 +164,7 @@ export default function CourseBuilder() {
 
 /* ---------------------------------------------------------------- Metadata + modules (one PUT /outline) */
 
-function MetadataCard({ course, onSaved }) {
+function MetadataCard({ course, onSaved, readOnly }) {
   const { values, bind, setValues } = useForm({ title: course.title || '', summary: course.summary || '', level: course.level || 'beginner', language: course.language || '', category: course.category || '', skills: (course.skills || []).join(', ') });
   useEffect(() => {
     setValues({ title: course.title || '', summary: course.summary || '', level: course.level || 'beginner', language: course.language || '', category: course.category || '', skills: (course.skills || []).join(', ') });
@@ -151,14 +182,14 @@ function MetadataCard({ course, onSaved }) {
     }),
     {
       success: 'Course details saved.',
-      onSuccess: (res) => onSaved({ title: values.title.trim(), summary: values.summary.trim(), level: values.level, language: values.language.trim(), category: values.category.trim(), skills: splitList(values.skills), status: res.status, modules: mergeModuleIds(course.modules, res.modules) }),
+      onSuccess: (res) => onSaved({ title: values.title.trim(), summary: values.summary.trim(), level: values.level, language: values.language.trim(), category: values.category.trim(), skills: splitList(values.skills), status: String(res.status || course.status).toLowerCase(), modules: mergeModuleIds(course.modules, res.modules) }),
     },
   );
   return (
     <Card>
       <CardHeader title="Course details" />
       <ErrorAlert error={save.error} className="mb-3" />
-      <div className="space-y-4">
+      <fieldset disabled={readOnly} className="space-y-4">
         <Field label="Title" required>{(p) => <Input {...p} {...bind('title')} />}</Field>
         <Field label="Summary" required>{(p) => <Textarea {...p} {...bind('summary')} rows={3} />}</Field>
         <FormGrid>
@@ -171,8 +202,8 @@ function MetadataCard({ course, onSaved }) {
           <Field label="Category">{(p) => <Input {...p} {...bind('category')} />}</Field>
           <Field label="Skills" hint="Comma-separated.">{(p) => <Input {...p} {...bind('skills')} />}</Field>
         </FormGrid>
-        <div className="flex justify-end"><Button loading={save.isPending} disabled={!values.title.trim() || !values.summary.trim()} onClick={() => save.mutate()}>Save details</Button></div>
-      </div>
+        {readOnly ? null : <div className="flex justify-end"><Button loading={save.isPending} disabled={!values.title.trim() || !values.summary.trim()} onClick={() => save.mutate()}>Save details</Button></div>}
+      </fieldset>
     </Card>
   );
 }
@@ -188,7 +219,7 @@ function mergeModuleIds(local = [], fromServer = []) {
     });
 }
 
-function ModulesCard({ course, onChange }) {
+function ModulesCard({ course, onChange, readOnly }) {
   const [draftModules, setDraftModules] = useState(course.modules || []);
   const [lessonTarget, setLessonTarget] = useState(null); // moduleId
   const [quizTarget, setQuizTarget] = useState(null);
@@ -198,7 +229,7 @@ function ModulesCard({ course, onChange }) {
 
   const save = useAction(
     () => courseApi.updateOutline(course.id, { modules: draftModules.map((m, i) => ({ id: m.id || null, title: m.title.trim(), order: i + 1 })) }),
-    { success: 'Outline saved.', onSuccess: (res) => onChange({ status: res.status, modules: mergeModuleIds(draftModules.map((m, i) => ({ ...m, order: i + 1 })), res.modules) }) },
+    { success: 'Outline saved.', onSuccess: (res) => onChange({ status: String(res.status || course.status).toLowerCase(), modules: mergeModuleIds(draftModules.map((m, i) => ({ ...m, order: i + 1 })), res.modules) }) },
   );
 
   const move = (i, dir) => setDraftModules((ms) => {
@@ -210,11 +241,11 @@ function ModulesCard({ course, onChange }) {
   });
 
   const addLessonLocal = (moduleId, lesson) => onChange({ modules: (course.modules || []).map((m) => (m.id === moduleId ? { ...m, lessons: [...(m.lessons || []), lesson].sort((a, b) => a.order - b.order) } : m)) });
-  const updateLessonLocal = (lessonId, patch) => onChange({ modules: (course.modules || []).map((m) => ({ ...m, lessons: (m.lessons || []).map((l) => (l.id === lessonId ? { ...l, ...patch } : l)) })) });
+  const updateLessonLocal = (lessonId, patch) => onChange({ modules: (course.modules || []).map((m) => ({ ...m, lessons: (m.lessons || []).map((l) => (l.id === lessonId ? { ...l, ...patch } : l)) })) }, { reconcile: false });
 
   return (
     <Card>
-      <CardHeader title="Modules & lessons" description="Order modules, then add video, document, assignment, live and quiz lessons. Save the outline before adding lessons to a new module." action={<Button size="sm" variant="secondary" icon={Plus} onClick={() => setDraftModules((ms) => [...ms, { id: null, title: `Module ${ms.length + 1}`, order: ms.length + 1, lessons: [] }])}>Add module</Button>} />
+      <CardHeader title="Modules & lessons" description="Order modules, then add video, document, assignment, live and quiz lessons. Save the outline before adding lessons to a new module." action={readOnly ? null : <Button size="sm" variant="secondary" icon={Plus} onClick={() => setDraftModules((ms) => [...ms, { id: null, title: `Module ${ms.length + 1}`, order: ms.length + 1, lessons: [] }])}>Add module</Button>} />
       <ErrorAlert error={save.error} className="mb-3" />
       {draftModules.length === 0 ? <p className="text-sm text-muted">No modules yet.</p> : null}
       <ol className="space-y-3">
@@ -222,26 +253,32 @@ function ModulesCard({ course, onChange }) {
           <li key={m.id || `new-${i}`} className="rounded-card border border-line">
             <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface/60 px-3 py-2">
               <span className="grid h-7 w-7 place-items-center rounded-full bg-white text-xs font-bold text-navy">{i + 1}</span>
-              <Input aria-label="Module title" value={m.title} onChange={(e) => setDraftModules((ms) => ms.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} className="min-h-9 flex-1" />
-              <Button variant="ghost" size="sm" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp className="h-4 w-4" /></Button>
-              <Button variant="ghost" size="sm" aria-label="Move down" disabled={i === draftModules.length - 1} onClick={() => move(i, 1)}><ArrowDown className="h-4 w-4" /></Button>
-              <Button variant="ghost" size="sm" aria-label="Remove module" onClick={() => setDraftModules((ms) => ms.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>
+              <Input aria-label="Module title" value={m.title} disabled={readOnly} onChange={(e) => setDraftModules((ms) => ms.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} className="min-h-9 flex-1" />
+              {readOnly ? null : (
+                <>
+                  <Button variant="ghost" size="sm" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="sm" aria-label="Move down" disabled={i === draftModules.length - 1} onClick={() => move(i, 1)}><ArrowDown className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="sm" aria-label="Remove module" onClick={() => setDraftModules((ms) => ms.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>
+                </>
+              )}
             </div>
             <ul className="divide-y divide-line">
               {(m.lessons || []).map((l) => (
-                <LessonRow key={l.id} lesson={l} onUpdated={(patch) => updateLessonLocal(l.id, patch)} />
+                <LessonRow key={l.id} lesson={l} readOnly={readOnly} onUpdated={(patch) => updateLessonLocal(l.id, patch)} />
               ))}
               {(m.lessons || []).length === 0 ? <li className="px-3 py-2 text-sm text-muted">No lessons in this module.</li> : null}
             </ul>
-            <div className="flex flex-wrap gap-2 px-3 py-2">
-              <Button size="sm" variant="secondary" icon={Plus} disabled={!m.id || dirty} onClick={() => setLessonTarget(m.id)}>Lesson</Button>
-              <Button size="sm" variant="secondary" icon={ListChecks} disabled={!m.id || dirty} onClick={() => setQuizTarget(m.id)}>Quiz</Button>
-              {!m.id || dirty ? <span className="self-center text-xs text-muted">Save the outline first.</span> : null}
-            </div>
+            {readOnly ? null : (
+              <div className="flex flex-wrap gap-2 px-3 py-2">
+                <Button size="sm" variant="secondary" icon={Plus} disabled={!m.id || dirty} onClick={() => setLessonTarget(m.id)}>Lesson</Button>
+                <Button size="sm" variant="secondary" icon={ListChecks} disabled={!m.id || dirty} onClick={() => setQuizTarget(m.id)}>Quiz</Button>
+                {!m.id || dirty ? <span className="self-center text-xs text-muted">Save the outline first.</span> : null}
+              </div>
+            )}
           </li>
         ))}
       </ol>
-      {dirty ? (
+      {dirty && !readOnly ? (
         <div className="mt-4 flex justify-end">
           <Button loading={save.isPending} disabled={draftModules.some((m) => !m.title.trim())} onClick={() => save.mutate()}>Save outline</Button>
         </div>
@@ -255,7 +292,7 @@ function ModulesCard({ course, onChange }) {
 
 const LESSON_ICON = { video: Video, doc: FileText, quiz: ListChecks, assignment: Upload, live: Send };
 
-function LessonRow({ lesson, onUpdated }) {
+function LessonRow({ lesson, onUpdated, readOnly }) {
   const toast = useToast();
   const Icon = LESSON_ICON[lesson.type] || FileText;
   const [progress, setProgress] = useState(null);
@@ -287,10 +324,12 @@ function LessonRow({ lesson, onUpdated }) {
       {lesson.type === 'video' ? (
         <div className="flex items-center gap-2">
           {lesson.videoStatus ? <StatusPill status={lesson.videoStatus} /> : <StatusPill status="no_video" tone="warn" label="No video" />}
-          <label className={`inline-flex min-h-9 cursor-pointer items-center gap-1 rounded-input border border-line px-3 text-xs font-semibold text-navy hover:bg-surface ${busy ? 'opacity-60' : ''}`}>
-            <Upload className="h-3.5 w-3.5" /> {busy ? `${progress ?? 0}%` : lesson.videoStatus ? 'Replace' : 'Upload video'}
-            <input type="file" accept="video/mp4,video/webm" className="sr-only" disabled={busy} onChange={(e) => e.target.files?.[0] && uploadVideo(e.target.files[0])} />
-          </label>
+          {readOnly ? null : (
+            <label className={`inline-flex min-h-9 cursor-pointer items-center gap-1 rounded-input border border-line px-3 text-xs font-semibold text-navy hover:bg-surface ${busy ? 'opacity-60' : ''}`}>
+              <Upload className="h-3.5 w-3.5" /> {busy ? `${progress ?? 0}%` : lesson.videoStatus ? 'Replace' : 'Upload video'}
+              <input type="file" accept="video/mp4,video/webm" className="sr-only" disabled={busy} onChange={(e) => e.target.files?.[0] && uploadVideo(e.target.files[0])} />
+            </label>
+          )}
         </div>
       ) : null}
     </li>
@@ -305,7 +344,7 @@ function PublishCard({ course, blockers, onChange, toast }) {
     silent: true,
     onSuccess: (res) => {
       setChecks(res);
-      onChange({ status: res.status });
+      onChange({ status: String(res.status || course.status).toLowerCase() });
       toast[res.checks.every((c) => c.passed) ? 'success' : 'info'](res.requiresHumanReview ? 'Queued for content review' : `Status: ${res.status}`);
     },
     onError: (err) => toast.error(err, 'Submit failed'),
@@ -319,7 +358,7 @@ function PublishCard({ course, blockers, onChange, toast }) {
     onError: (err) => toast.error(err, 'Publish failed'),
   });
 
-  const status = course.status || 'draft';
+  const status = String(course.status || 'draft').toLowerCase();
   return (
     <Card>
       <CardHeader title="Review & publish" />

@@ -2,12 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using Plastoids.Infrastructure.Http;
 using Plastoids.Modules.Catalogue.Domain;
 using Plastoids.Modules.Catalogue.Persistence;
+using Plastoids.Modules.Identity.Contracts;
 using Plastoids.SharedKernel.Cqrs;
 using Plastoids.SharedKernel.Results;
 
 namespace Plastoids.Modules.Catalogue.Features.Discovery.SearchCourses;
 
-internal sealed class SearchCoursesHandler(CatalogueDbContext db) : IQueryHandler<SearchCoursesQuery, SearchCoursesResponse>
+internal sealed class SearchCoursesHandler(CatalogueDbContext db, IOrganisationDirectory organisations) : IQueryHandler<SearchCoursesQuery, SearchCoursesResponse>
 {
     public async Task<Result<SearchCoursesResponse>> Handle(SearchCoursesQuery request, CancellationToken cancellationToken)
     {
@@ -83,7 +84,8 @@ internal sealed class SearchCoursesHandler(CatalogueDbContext db) : IQueryHandle
         var page = rows.Take(limit).ToList();
         var ids = page.Select(c => c.Id).ToList();
         var pageOfferings = await db.Offerings.AsNoTracking().Where(o => o.Active && ids.Contains(o.CourseId)).ToListAsync(cancellationToken);
-        var items = page.Select(c => ToCard(c, pageOfferings.Where(o => o.CourseId == c.Id).ToList())).ToList();
+        var providers = await ProviderNamesAsync(page, cancellationToken);
+        var items = page.Select(c => ToCard(c, pageOfferings.Where(o => o.CourseId == c.Id).ToList(), providers)).ToList();
 
         SearchSuggestions? suggestions = null;
         if (items.Count == 0)
@@ -101,13 +103,29 @@ internal sealed class SearchCoursesHandler(CatalogueDbContext db) : IQueryHandle
                 skillSuggestions = skillSuggestions.OrderByDescending(s => s.Contains(needle, StringComparison.Ordinal) || needle.Contains(s, StringComparison.Ordinal) ? 1 : 0);
             }
 
-            suggestions = new SearchSuggestions(skillSuggestions.Take(8).ToList(), categories, popular.Select(c => ToCard(c, popularOfferings.Where(o => o.CourseId == c.Id).ToList())).ToList());
+            var popularProviders = await ProviderNamesAsync(popular, cancellationToken);
+            suggestions = new SearchSuggestions(skillSuggestions.Take(8).ToList(), categories, popular.Select(c => ToCard(c, popularOfferings.Where(o => o.CourseId == c.Id).ToList(), popularProviders)).ToList());
         }
 
         return new SearchCoursesResponse(items, hasMore ? Cursor.Encode(items[^1].CourseId) : null, total, suggestions);
     }
 
-    internal static CourseCard ToCard(Course c, IReadOnlyList<Offering> offerings) => new(
+    /// <summary>Organisation names for the page's organisation-owned courses, one directory lookup per distinct organisation (ADR 0019).</summary>
+    private async Task<IReadOnlyDictionary<Guid, string>> ProviderNamesAsync(IEnumerable<Course> courses, CancellationToken cancellationToken)
+    {
+        var names = new Dictionary<Guid, string>();
+        foreach (var organisationId in courses.Where(c => c.IsOrganisationOwned && c.OrganisationId is not null).Select(c => c.OrganisationId!.Value).Distinct())
+        {
+            if (await organisations.GetAsync(organisationId, cancellationToken) is { } organisation)
+            {
+                names[organisationId] = organisation.Name;
+            }
+        }
+
+        return names;
+    }
+
+    internal static CourseCard ToCard(Course c, IReadOnlyList<Offering> offerings, IReadOnlyDictionary<Guid, string> providers) => new(
         c.Id,
         c.Slug,
         c.Title,
@@ -121,5 +139,6 @@ internal sealed class SearchCoursesHandler(CatalogueDbContext db) : IQueryHandle
         offerings.Any(o => o.AcceptsSponsorship),
         c.RatingAverage,
         c.RatingCount,
-        c.EstimatedMinutes);
+        c.EstimatedMinutes,
+        c.OrganisationId is { } organisationId && providers.TryGetValue(organisationId, out var provider) ? provider : null);
 }

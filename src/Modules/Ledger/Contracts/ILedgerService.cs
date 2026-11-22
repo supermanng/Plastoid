@@ -16,6 +16,9 @@ public static class AccountCodes
 
     /// <summary>Cash held against unsold units in wallets (ADR 0018); sub-ledger per wallet.</summary>
     public const string UnitBalancesHeld = "2050";
+
+    /// <summary>Owed to organisations for sales of their courses (ADR 0019); sub-ledger per organisation.</summary>
+    public const string ProviderPayable = "2060";
     public const string CourseCommission = "4010";
     public const string TutoringCommission = "4020";
     public const string ProgrammeManagementFee = "4030";
@@ -26,16 +29,19 @@ public static class AccountCodes
     /// <summary>Gap between the naira released from unit balances and the price applied (rate changes, whole-unit rounding). Revenue account; a shortfall is debited.</summary>
     public const string UnitRevaluation = "4060";
 
-    public static readonly IReadOnlyList<string> All = [BankOperating, BankClientFunds, GatewayReceivable, TutorPayable, ProgrammeFundsHeld, LearnerRefundCredit, VatPayable, UnitBalancesHeld, CourseCommission, TutoringCommission, ProgrammeManagementFee, PlatformSeatFee, Subscriptions, UnitRevaluation, ProcessingFees];
+    public static readonly IReadOnlyList<string> All = [BankOperating, BankClientFunds, GatewayReceivable, TutorPayable, ProgrammeFundsHeld, LearnerRefundCredit, VatPayable, UnitBalancesHeld, ProviderPayable, CourseCommission, TutoringCommission, ProgrammeManagementFee, PlatformSeatFee, Subscriptions, UnitRevaluation, ProcessingFees];
 }
 
-/// <summary>Sub-ledger owners: 2010 per tutor, 2020 per programme, 2030 per learner.</summary>
+/// <summary>Sub-ledger owners: 2010 per tutor, 2020 per programme, 2030 per learner, 2050 per wallet, 2060 per organisation.</summary>
 public static class SubLedgerOwnerTypes
 {
     public const string Tutor = "tutor";
     public const string Programme = "programme";
     public const string Learner = "learner";
     public const string Wallet = "wallet";
+
+    /// <summary>2060 per organisation (ADR 0019).</summary>
+    public const string Organisation = "organisation";
 }
 
 /// <summary>One side of a posting. Exactly one of Debit/Credit is non-zero.</summary>

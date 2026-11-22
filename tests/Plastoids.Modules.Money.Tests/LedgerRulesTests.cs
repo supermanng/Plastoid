@@ -35,8 +35,8 @@ public class LedgerRulesTests
     }
 
     [Fact]
-    public void Chart_of_accounts_has_the_blueprint_codes_plus_the_two_unit_accounts()
+    public void Chart_of_accounts_has_the_blueprint_codes_plus_the_unit_and_provider_accounts()
     {
-        AccountCodes.All.Should().Equal("1010", "1020", "1030", "2010", "2020", "2030", "2040", "2050", "4010", "4020", "4030", "4040", "4050", "4060", "5010");
+        AccountCodes.All.Should().Equal("1010", "1020", "1030", "2010", "2020", "2030", "2040", "2050", "2060", "4010", "4020", "4030", "4040", "4050", "4060", "5010");
     }
 }

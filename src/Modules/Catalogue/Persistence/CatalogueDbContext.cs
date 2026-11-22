@@ -18,6 +18,7 @@ public sealed class CatalogueDbContext(DbContextOptions<CatalogueDbContext> opti
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<CourseReviewTask> ReviewTasks => Set<CourseReviewTask>();
     public DbSet<VerifiedTutor> VerifiedTutors => Set<VerifiedTutor>();
+    public DbSet<Engagement> Engagements => Set<Engagement>();
 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {

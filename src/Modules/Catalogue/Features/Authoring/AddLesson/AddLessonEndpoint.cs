@@ -16,6 +16,6 @@ internal static class AddLessonEndpoint
                     .ToCreatedResult(r => $"/api/v1/catalogue/lessons/{r.LessonId}"))
             .WithName("AddLesson")
             .WithSummary("Owner: add a video, doc, assignment or live lesson to a module.")
-            .RequireAuthorization(Policies.Tutor);
+            .RequireAuthorization(Policies.Mfa); // ownership (tutor, organisation owner/author, staff) is decided by CourseAccess (ADR 0019 §2)
     }
 }

@@ -19,7 +19,7 @@ internal static class UploadLessonVideoEndpoint
                 (await sender.Send(new UploadLessonVideoCommand(lessonId), ct)).ToHttpResult(StatusCodes.Status201Created))
             .WithName("UploadLessonVideo")
             .WithSummary("Owner: get a direct-upload URL for a video lesson; the provider webhook marks it ready after transcoding.")
-            .RequireAuthorization(Policies.Tutor);
+            .RequireAuthorization(Policies.Mfa); // ownership (tutor, organisation owner/author, staff) is decided by CourseAccess (ADR 0019 §2)
 
         // Provider → Plastoids. Signature header: X-Video-Signature (HMAC-SHA256 of the raw body for the fake provider).
         catalogue.MapPost("/webhooks/video/{provider}", async (string provider, HttpRequest request, IVideoProvider video, ISender sender, CancellationToken ct) =>

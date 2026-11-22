@@ -33,6 +33,16 @@ export function UserLink({ id, label }) {
   );
 }
 
+/** A payout payee (ADR 0019): a tutor links to the user page; an organisation shows its id with a label. */
+export function PayeeLink({ row }) {
+  const type = String(row?.payeeType || 'tutor').toLowerCase();
+  const id = row?.payeeId || row?.tutorUserId;
+  if (type === 'organisation') {
+    return <span className="inline-flex items-center gap-1 text-xs"><span className="rounded bg-surface px-1.5 py-0.5 font-semibold text-navy">Organisation</span><Id value={id} /></span>;
+  }
+  return <UserLink id={id} />;
+}
+
 /** Is the signed-in staff member the maker of this record? */
 export function useIsMaker(makerId) {
   const auth = useAuth();

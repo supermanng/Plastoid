@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Plastoids.Modules.Catalogue.Domain;
 using Plastoids.Modules.Catalogue.Persistence;
 using Plastoids.Modules.Catalogue.Services;
@@ -24,7 +25,31 @@ internal sealed class CreateOfferingHandler(CatalogueDbContext db, CourseAccess 
             return Result.Failure<CreateOfferingResponse>(created.Error);
         }
 
-        db.Offerings.Add(created.Value);
-        return new CreateOfferingResponse(created.Value.Id, course.Id, created.Value.Format, created.Value.Price);
+        var offering = created.Value;
+        if (course.IsOrganisationOwned)
+        {
+            // ADR 0019 §4: who teaches an organisation course's offering is fixed at the offering, from an active engagement.
+            if (request.TutorUserId is not { } tutorUserId)
+            {
+                if (request.Format != OfferingFormats.SelfPaced)
+                {
+                    return Error.Validation("tutor_required", "Cohort and one-to-one offerings of an organisation course need an engaged tutor (tutorUserId).");
+                }
+            }
+            else
+            {
+                var engagement = await db.Engagements.AsNoTracking()
+                    .SingleOrDefaultAsync(e => e.CourseId == course.Id && e.TutorUserId == tutorUserId && e.Status == EngagementStatus.Active, cancellationToken);
+                if (engagement is null)
+                {
+                    return Error.Validation("tutor_not_engaged", "The tutor has no active engagement on this course; offer one and wait for them to accept.");
+                }
+
+                offering.AssignTutor(tutorUserId, engagement.Id);
+            }
+        }
+
+        db.Offerings.Add(offering);
+        return new CreateOfferingResponse(offering.Id, course.Id, offering.Format, offering.Price, offering.TutorUserId, offering.EngagementId);
     }
 }

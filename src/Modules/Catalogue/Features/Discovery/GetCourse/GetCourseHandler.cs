@@ -3,6 +3,7 @@ using Plastoids.Infrastructure.Integrations;
 using Plastoids.Modules.Catalogue.Domain;
 using Plastoids.Modules.Catalogue.Persistence;
 using Plastoids.Modules.Catalogue.Services;
+using Plastoids.Modules.Identity.Contracts;
 using Plastoids.SharedKernel.Cqrs;
 using Plastoids.SharedKernel.Results;
 using Plastoids.SharedKernel.Tenancy;
@@ -10,7 +11,7 @@ using Plastoids.SharedKernel.Time;
 
 namespace Plastoids.Modules.Catalogue.Features.Discovery.GetCourse;
 
-internal sealed class GetCourseHandler(CatalogueDbContext db, PriceQuotes quotes, IVideoProvider video, ICurrentUser currentUser, IClock clock) : IQueryHandler<GetCourseQuery, CourseDetail>
+internal sealed class GetCourseHandler(CatalogueDbContext db, PriceQuotes quotes, IVideoProvider video, IOrganisationDirectory organisations, ICurrentUser currentUser, IClock clock) : IQueryHandler<GetCourseQuery, CourseDetail>
 {
     public async Task<Result<CourseDetail>> Handle(GetCourseQuery request, CancellationToken cancellationToken)
     {
@@ -41,7 +42,13 @@ internal sealed class GetCourseHandler(CatalogueDbContext db, PriceQuotes quotes
             l.Id, l.Type, l.Title, l.Order, l.DurationMinutes, l.IsPreview,
             l.IsPreview && l.PlaybackId is not null ? video.SignedPlaybackUrl(l.PlaybackId, TimeSpan.FromHours(1), clock.UtcNow) : null)).ToList())).ToList();
 
-        return new CourseDetail(course.Id, course.Slug, course.Title, course.Summary, course.Level, course.Language, course.Category, course.Skills, course.OwnerId,
+        ProviderView? provider = null;
+        if (course.IsOrganisationOwned && course.OrganisationId is { } organisationId && await organisations.GetAsync(organisationId, cancellationToken) is { } organisation)
+        {
+            provider = new ProviderView(organisation.OrganisationId, organisation.Name);
+        }
+
+        return new CourseDetail(course.Id, course.Slug, course.Title, course.Summary, course.Level, course.Language, course.Category, course.Skills, course.OwnerId, course.OwnerTypeName, provider,
             version.VersionNo, course.PublishedAt, version.LessonCount, version.EstimatedMinutes, course.RatingAverage, course.RatingCount,
             modules, offeringViews, reviews.Select(r => new ReviewView(r.Rating, r.Body, r.CreatedAt)).ToList());
     }

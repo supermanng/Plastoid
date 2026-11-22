@@ -42,6 +42,12 @@ public sealed class Offering : Entity
     public int? DurationWeeks { get; private set; }
     public bool Active { get; private set; }
 
+    /// <summary>The engaged tutor who teaches this offering of an organisation course (ADR 0019); null on tutor-owned courses or unassigned self-paced offerings.</summary>
+    public Guid? TutorUserId { get; private set; }
+
+    /// <summary>The engagement that pays <see cref="TutorUserId"/>; null when no tutor is assigned.</summary>
+    public Guid? EngagementId { get; private set; }
+
     public static Result<Offering> Create(Guid tenantId, Guid courseId, string format, Money price, IEnumerable<string> fundingTypes, int? capacity, DateTime? startAt, int? durationWeeks, DateTime utcNow)
     {
         if (price.IsNegative || price.Currency != Money.Naira)
@@ -79,6 +85,13 @@ public sealed class Offering : Entity
     }
 
     public bool AcceptsSponsorship => FundingTypes.Contains(Domain.FundingTypes.Sponsored);
+
+    /// <summary>Names the engaged tutor (and the engagement whose terms pay them) for an organisation course's offering.</summary>
+    public void AssignTutor(Guid tutorUserId, Guid engagementId)
+    {
+        TutorUserId = tutorUserId;
+        EngagementId = engagementId;
+    }
 
     public void Close() => Active = false;
 }

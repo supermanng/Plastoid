@@ -5,10 +5,9 @@ import { Alert, Button, StatusPill } from '../../components/ui';
 import { formatDateTime } from '../../lib/format';
 
 /* ---------------------------------------------------------------- Local memory
- * The API has no "list my courses" / "list my cohorts" read for tutors, so things this UI creates are remembered
- * per browser. They are only a convenience index; the server stays the source of truth for the records themselves. */
+ * The Lms module has no "list my cohorts" read, so cohorts this UI opens are remembered per browser. They are only a
+ * convenience index; the server stays the source of truth. (Courses come from GET /catalogue/courses/mine since ADR 0019.) */
 
-const COURSES_KEY = 'plastoids.tutor.courses';
 const COHORTS_KEY = 'plastoids.tutor.cohorts';
 
 function readList(key) {
@@ -52,10 +51,6 @@ function useRemembered(key) {
     });
   }, [key]);
   return { items, remember, forget };
-}
-
-export function useRememberedCourses() {
-  return useRemembered(COURSES_KEY);
 }
 
 export function useRememberedCohorts() {

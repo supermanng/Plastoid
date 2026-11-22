@@ -18,6 +18,9 @@ export const tutorKeys = {
   bookings: (upcoming) => ['tutor', 'bookings', upcoming ? 'upcoming' : 'all'],
   upcomingSessions: (days) => ['tutor', 'live-sessions', days ?? 7],
   course: (slug) => ['course', slug],
+  myCourses: ['tutor', 'courses'],
+  authoring: (courseId) => ['course', 'authoring', courseId],
+  engagements: ['tutor', 'engagements'],
   gradebook: (courseId) => ['tutor', 'gradebook', courseId],
   threads: (cohortId) => ['tutor', 'cohort', cohortId, 'threads'],
   announcements: (cohortId) => ['tutor', 'cohort', cohortId, 'announcements'],
@@ -64,6 +67,12 @@ export const courseApi = {
   /** CourseDetail (published, or unpublished for signed-in users; drafts are NOT readable). */
   bySlug: (slug) => api.get(`/catalogue/courses/${encodeURIComponent(slug)}`),
 
+  /** [CourseSummary] for the signed-in tutor (ADR 0019): courseId, slug, title, status, level, category, language, ownerType, currentVersionNo, publishedAt, updatedAt, offeringCount, activeEngagements */
+  listMine: () => api.get('/catalogue/courses/mine'),
+
+  /** Draft outline for the builder (owner, organisation owner/author or staff): course fields, status, modules[lessons], offerings. */
+  authoring: (courseId) => api.get(`/catalogue/courses/${courseId}/authoring`),
+
   /** { title?, summary?, level?, language?, category?, skills?, modules: [{ id?, title, order }] } → { courseId, status, modules[] } */
   updateOutline: (courseId, body) => api.put(`/catalogue/courses/${courseId}/outline`, body),
 
@@ -76,7 +85,7 @@ export const courseApi = {
   /** → { mediaAssetId, provider, uploadId, uploadUrl } */
   videoUploadUrl: (lessonId) => api.post(`/catalogue/lessons/${lessonId}/video`, {}),
 
-  /** { format (self_paced|cohort|one_to_one), price: Money, fundingTypes[] (self|sponsored|employer), capacity?, startAt?, durationWeeks? } */
+  /** { format (self_paced|cohort|one_to_one), price: Money, fundingTypes[] (self|sponsored|employer), capacity?, startAt?, durationWeeks?, tutorUserId? (engaged tutor on organisation courses) } */
   addOffering: (courseId, body) => api.post(`/catalogue/courses/${courseId}/offerings`, body),
 
   /** → { courseId, status, requiresHumanReview, checks: [{ code, passed, message }] } */
@@ -86,10 +95,20 @@ export const courseApi = {
   publish: (courseId) => api.post(`/catalogue/courses/${courseId}/publish`, {}),
 };
 
+/* ---------------------------------------------------------------- Catalogue (tutor engagements, ADR 0019) */
+
+export const engagementApi = {
+  /** [EngagementView]: engagementId, courseId, courseTitle, courseSlug, organisationId, organisationName, tutorId, tutorUserId, terms { kind, shareBps, fixedFee }, status, note, offeredBy, offeredAt, respondedAt, endedAt */
+  mine: () => api.get('/catalogue/engagements/mine'),
+
+  /** { accept: bool, note? } → EngagementView */
+  respond: (engagementId, { accept, note }) => api.post(`/catalogue/engagements/${engagementId}/respond`, { accept, note: note || null }),
+};
+
 /* ---------------------------------------------------------------- Lms */
 
 export const lmsApi = {
-  /** { courseId, offeringId, name, startsAt, endsAt, capacity, programmeId? } → { cohortId, courseId, offeringId, name, startsAt, endsAt, capacity } */
+  /** { courseId, offeringId, name, startsAt, endsAt, capacity, programmeId?, tutorUserId? (an actively engaged tutor on an organisation course) } → { cohortId, courseId, offeringId, name, startsAt, endsAt, capacity } */
   createCohort: (body) => api.post('/lms/cohorts', body),
 
   /** { weekdays: ["monday", ...], startTimeUtc "HH:mm:ss", durationMinutes, titlePrefix? } → { cohortId, created, firstSession, lastSession } */

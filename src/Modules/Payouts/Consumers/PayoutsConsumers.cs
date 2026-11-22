@@ -11,26 +11,48 @@ using Plastoids.SharedKernel.Time;
 
 namespace Plastoids.Modules.Payouts.Consumers;
 
-/// <summary>payments.payment-succeeded.v1 with a payee → an earning: course sales hold 7 days; sessions wait for Booking's 72-hour release.</summary>
+/// <summary>
+/// payments.payment-succeeded.v1 with a payee → an earning: course sales hold 7 days; sessions wait for Booking's 72-hour release.
+/// A provider sale (ADR 0019) records the organisation's net and, when a tutor is engaged with a share, a second earning for the tutor.
+/// </summary>
 internal sealed class PaymentSucceededConsumer(PayoutsDbContext db, IOptions<PayoutOptions> options, IClock clock) : IIntegrationEventHandler<PaymentSucceeded>
 {
     public async Task HandleAsync(PaymentSucceeded @event, IntegrationEventEnvelope envelope, CancellationToken cancellationToken)
     {
-        if (@event.PayeeUserId is not { } tutor || @event.Purpose is not (PaymentPurposes.Course or PaymentPurposes.Booking))
+        if (@event.Purpose is not (PaymentPurposes.Course or PaymentPurposes.Booking))
         {
             return;
         }
 
         var key = "payment:" + @event.PaymentIntentId.ToString("N");
-        if (await db.Earnings.AnyAsync(e => e.SourceKey == key, cancellationToken))
+        var now = clock.UtcNow;
+        var source = @event.Purpose == PaymentPurposes.Course ? EarningSources.Course : EarningSources.Booking;
+        var releasesAt = @event.Purpose == PaymentPurposes.Course ? now.AddDays(options.Value.CourseSaleHoldDays) : (DateTime?)null;
+        if (@event.PayeeType == PayeeTypes.Organisation && @event.PayeeOrganisationId is { } organisation)
+        {
+            await RecordOnceAsync(envelope.TenantId, PayeeTypes.Organisation, organisation, source, @event, key, @event.PayeeNet ?? @event.Amount, now, releasesAt, cancellationToken);
+            if (@event.PayeeUserId is { } engagedTutor && @event.TutorShare is { } share && !share.IsZero)
+            {
+                await RecordOnceAsync(envelope.TenantId, PayeeTypes.Tutor, engagedTutor, source, @event, key + ":tutor", share, now, releasesAt, cancellationToken);
+            }
+
+            return;
+        }
+
+        if (@event.PayeeUserId is { } tutor)
+        {
+            await RecordOnceAsync(envelope.TenantId, PayeeTypes.Tutor, tutor, source, @event, key, @event.PayeeNet ?? @event.Amount, now, releasesAt, cancellationToken);
+        }
+    }
+
+    private async Task RecordOnceAsync(Guid tenantId, string payeeType, Guid payeeId, string source, PaymentSucceeded @event, string key, Plastoids.SharedKernel.Domain.Money net, DateTime now, DateTime? releasesAt, CancellationToken ct)
+    {
+        if (await db.Earnings.AnyAsync(e => e.SourceKey == key, ct))
         {
             return;
         }
 
-        var now = clock.UtcNow;
-        var net = @event.PayeeNet ?? @event.Amount;
-        var releasesAt = @event.Purpose == PaymentPurposes.Course ? now.AddDays(options.Value.CourseSaleHoldDays) : (DateTime?)null;
-        db.Earnings.Add(Earning.Record(envelope.TenantId, tutor, @event.Purpose == PaymentPurposes.Course ? EarningSources.Course : EarningSources.Booking, @event.PaymentIntentId, @event.ReferenceId, key, @event.Amount, net, now, releasesAt));
+        db.Earnings.Add(Earning.Record(tenantId, payeeType, payeeId, source, @event.PaymentIntentId, @event.ReferenceId, key, @event.Amount, net, now, releasesAt));
     }
 }
 
@@ -48,13 +70,16 @@ internal sealed class EarningReleasedConsumer(PayoutsDbContext db, IClock clock)
     }
 }
 
-/// <summary>payments.refund-issued.v1: the tutor's share of a refunded sale is no longer payable.</summary>
+/// <summary>payments.refund-issued.v1: the payees' shares of a refunded sale are no longer payable (both rows of a provider sale).</summary>
 internal sealed class RefundIssuedConsumer(PayoutsDbContext db) : IIntegrationEventHandler<RefundIssued>
 {
     public async Task HandleAsync(RefundIssued @event, IntegrationEventEnvelope envelope, CancellationToken cancellationToken)
     {
-        var earning = await db.Earnings.SingleOrDefaultAsync(e => e.SourceId == @event.OriginalPaymentIntentId, cancellationToken);
-        earning?.ApplyRefund(@event.Amount);
+        var earnings = await db.Earnings.Where(e => e.SourceId == @event.OriginalPaymentIntentId).ToListAsync(cancellationToken);
+        foreach (var earning in earnings)
+        {
+            earning.ApplyRefund(@event.Amount);
+        }
     }
 }
 
@@ -70,7 +95,7 @@ internal sealed class TutorEarningsAccruedConsumer(PayoutsDbContext db, IClock c
         }
 
         var now = clock.UtcNow;
-        var earning = Earning.Record(envelope.TenantId, @event.TutorUserId, EarningSources.Programme, @event.ProgrammeId, @event.ProgrammeId, key, @event.Amount, @event.Amount, now, now);
+        var earning = Earning.Record(envelope.TenantId, PayeeTypes.Tutor, @event.TutorUserId, EarningSources.Programme, @event.ProgrammeId, @event.ProgrammeId, key, @event.Amount, @event.Amount, now, now);
         earning.Release(now);
         db.Earnings.Add(earning);
     }

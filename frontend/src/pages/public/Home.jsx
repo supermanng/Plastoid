@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Award, BookOpen, Briefcase, GraduationCap, Search, ShieldCheck, Sparkles, Star, Users } from 'lucide-react';
+import { ArrowRight, Award, BookOpen, Briefcase, Building2, GraduationCap, Search, ShieldCheck, Sparkles, Star, Users } from 'lucide-react';
 import { Button, Card, Skeleton, StatusPill } from '../../components/ui';
 import { api } from '../../lib/api';
 import { formatDate, koboOf } from '../../lib/format';
@@ -202,6 +202,7 @@ export function CourseCard({ c }) {
       </div>
       <div>
         <h3 className="text-base font-bold leading-snug text-navy">{c.title}</h3>
+        {c.providerName ? <p className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-muted"><Building2 className="h-3.5 w-3.5 text-cyan" aria-hidden /> {c.providerName}</p> : null}
         <p className="mt-0.5 line-clamp-2 text-sm text-muted">{c.summary}</p>
       </div>
       <div className="mt-auto flex items-center justify-between text-sm">

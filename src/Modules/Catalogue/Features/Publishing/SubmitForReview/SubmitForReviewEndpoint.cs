@@ -14,6 +14,6 @@ internal static class SubmitForReviewEndpoint
         group.MapPost("/{courseId:guid}/submit", async (Guid courseId, ISender sender, CancellationToken ct) => (await sender.Send(new SubmitForReviewCommand(courseId), ct)).ToHttpResult())
             .WithName("SubmitCourseForReview")
             .WithSummary("Owner: run automated checks and queue the course for content review (human for the first 3 courses, sampled after).")
-            .RequireAuthorization(Policies.Tutor);
+            .RequireAuthorization(Policies.Mfa); // ownership (tutor, organisation owner/author, staff) is decided by CourseAccess (ADR 0019 §2)
     }
 }

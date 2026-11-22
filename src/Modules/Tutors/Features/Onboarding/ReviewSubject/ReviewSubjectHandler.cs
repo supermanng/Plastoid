@@ -42,8 +42,12 @@ internal sealed class ReviewSubjectHandler(TutorsDbContext db, IOutbox outbox, I
         var approved = request.Decision == ReviewDecisions.Approved;
         db.Checks.Add(VerificationCheck.Record(profile.TenantId, profile.Id, CheckTypes.Subject, "reviewer-panel", profile.Id.ToString("N"),
             approved ? CheckResult.Passed : CheckResult.Failed, request.Note ?? (request.Score is { } s ? $"score={s}" : null), reviewerId, now));
-        var queueItem = await db.ReviewQueue.SingleOrDefaultAsync(q => q.Kind == ReviewKinds.Subject && q.ReferenceId == profile.Id && q.CompletedAt == null, cancellationToken);
-        queueItem?.Complete(reviewerId, now);
+        // A tutor who re-submitted a demo lesson has more than one open queue item: one decision completes them all.
+        var queueItems = await db.ReviewQueue.Where(q => q.Kind == ReviewKinds.Subject && q.ReferenceId == profile.Id && q.CompletedAt == null).ToListAsync(cancellationToken);
+        foreach (var queueItem in queueItems)
+        {
+            queueItem.Complete(reviewerId, now);
+        }
 
         if (approved)
         {

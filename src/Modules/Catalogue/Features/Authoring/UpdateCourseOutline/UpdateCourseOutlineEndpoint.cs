@@ -15,6 +15,6 @@ internal static class UpdateCourseOutlineEndpoint
                 (await sender.Send(new UpdateCourseOutlineCommand(courseId, body.Title, body.Summary, body.Level, body.Language, body.Category, body.Skills, body.Modules), ct)).ToHttpResult())
             .WithName("UpdateCourseOutline")
             .WithSummary("Owner: update metadata and the ordered module list (modules without an id are created; omitted ones are deleted).")
-            .RequireAuthorization(Policies.Tutor);
+            .RequireAuthorization(Policies.Mfa); // ownership (tutor, organisation owner/author, staff) is decided by CourseAccess (ADR 0019 §2)
     }
 }

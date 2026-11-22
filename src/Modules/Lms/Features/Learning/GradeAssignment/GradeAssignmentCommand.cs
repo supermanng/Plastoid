@@ -44,7 +44,7 @@ internal sealed class GradeAssignmentValidator : AbstractValidator<GradeAssignme
     }
 }
 
-internal sealed class GradeAssignmentHandler(LmsDbContext db, ProgressService progress, IOutbox outbox, ICurrentUser currentUser, IClock clock) : ICommandHandler<GradeAssignmentCommand, GradeAssignmentResponse>
+internal sealed class GradeAssignmentHandler(LmsDbContext db, ProgressService progress, TeachingAccess teaching, IOutbox outbox, ICurrentUser currentUser, IClock clock) : ICommandHandler<GradeAssignmentCommand, GradeAssignmentResponse>
 {
     public async Task<Result<GradeAssignmentResponse>> Handle(GradeAssignmentCommand request, CancellationToken cancellationToken)
     {
@@ -62,9 +62,9 @@ internal sealed class GradeAssignmentHandler(LmsDbContext db, ProgressService pr
         }
 
         var graderId = currentUser.UserId ?? Guid.Empty;
-        if (course.Value.OwnerUserId != graderId && !currentUser.Roles.Contains("staff"))
+        if (!await teaching.CanManageCourseAsync(course.Value, graderId, cancellationToken))
         {
-            return Error.Forbidden("not_course_tutor", "Only the course tutor (or staff) can grade.");
+            return Error.Forbidden("not_course_tutor", "Only the course's teachers (owner, organisation authors, engaged tutors) or staff can grade.");
         }
 
         var lesson = course.Value.Lessons.Single(l => l.LessonId == submission.LessonId);
@@ -108,7 +108,7 @@ internal static class GradeAssignmentEndpoint
         lms.MapPost("/submissions/{submissionId:guid}/grade", async (Guid submissionId, GradeAssignmentRequest body, ISender sender, CancellationToken ct) =>
                 (await sender.Send(new GradeAssignmentCommand(submissionId, body.Rubric, body.Feedback), ct)).ToHttpResult())
             .WithName("GradeAssignment")
-            .WithSummary("Tutor: grade a submission with a rubric; pass mark from the lesson content (default 70 %).")
-            .RequireAuthorization(Policies.Tutor);
+            .WithSummary("Teacher: grade a submission with a rubric; pass mark from the lesson content (default 70 %).")
+            .RequireAuthorization(Policies.Mfa); // teaching access is decided in the handler (ADR 0019 §4)
     }
 }

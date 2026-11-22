@@ -612,6 +612,10 @@ namespace Plastoids.Modules.Payments.Persistence.Migrations
                         .HasColumnType("varchar(300)")
                         .HasColumnName("description");
 
+                    b.Property<Guid?>("EngagementId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("engagement_id");
+
                     b.Property<DateTime?>("FailedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("failed_at");
@@ -636,6 +640,16 @@ namespace Plastoids.Modules.Payments.Persistence.Migrations
                     b.Property<Guid?>("LedgerEntryId")
                         .HasColumnType("binary(16)")
                         .HasColumnName("ledger_entry_id");
+
+                    b.Property<Guid?>("PayeeOrganisationId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("payee_organisation_id");
+
+                    b.Property<string>("PayeeType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("payee_type");
 
                     b.Property<Guid?>("PayeeUserId")
                         .HasColumnType("binary(16)")
@@ -773,12 +787,27 @@ namespace Plastoids.Modules.Payments.Persistence.Migrations
                                 .HasColumnName("refunded_amount_currency");
                         });
 
+                    b.ComplexProperty<Dictionary<string, object>>("TutorShare", "Plastoids.Modules.Payments.Domain.PaymentIntent.TutorShare#Money", b1 =>
+                        {
+                            b1.Property<long>("AmountKobo")
+                                .HasColumnType("bigint")
+                                .HasColumnName("tutor_share_kobo");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("char(3)")
+                                .HasColumnName("tutor_share_currency");
+                        });
+
                     b.HasKey("Id")
                         .HasName("pk_payments_intents");
 
                     b.HasIndex("GatewayReference")
                         .IsUnique()
                         .HasDatabaseName("ix_payments_intents_gateway_reference");
+
+                    b.HasIndex("PayeeOrganisationId")
+                        .HasDatabaseName("ix_payments_intents_payee_organisation_id");
 
                     b.HasIndex("TenantId")
                         .HasDatabaseName("ix_payments_intents_tenant_id");

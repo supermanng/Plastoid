@@ -1,3 +1,4 @@
+using Plastoids.Modules.Payments.Contracts;
 using Plastoids.SharedKernel.Domain;
 using Plastoids.SharedKernel.Results;
 
@@ -40,6 +41,14 @@ public sealed class PaymentIntent : Entity
     public string CheckoutUrl { get; private set; } = string.Empty;
     public PaymentStatus Status { get; private set; }
     public Guid? PayeeUserId { get; private set; }
+
+    /// <summary>"tutor" (PayeeUserId is paid PayeeNet) or "organisation" (ADR 0019: PayeeOrganisationId is paid PayeeNet, the engaged tutor PayeeUserId is paid TutorShare).</summary>
+    public string PayeeType { get; private set; } = PayeeTypes.Tutor;
+    public Guid? PayeeOrganisationId { get; private set; }
+
+    /// <summary>The engaged tutor's part of a provider sale, computed from the engagement terms on the net of commission; zero for tutor sales.</summary>
+    public Money TutorShare { get; private set; }
+    public Guid? EngagementId { get; private set; }
     public int CommissionBps { get; private set; }
     public string CommissionRuleCode { get; private set; } = string.Empty;
     public Money Commission { get; private set; }
@@ -62,6 +71,12 @@ public sealed class PaymentIntent : Entity
 
     public bool PaidWithUnits => PaymentMethod == PaymentMethods.Units;
 
+    /// <summary>A sale of an organisation-owned course (ADR 0019).</summary>
+    public bool IsProviderSale => PayeeType == PayeeTypes.Organisation;
+
+    /// <summary>What the sale leaves after commission: the tutor share plus the organisation's or tutor's net.</summary>
+    public Money NetOfCommission => Amount - Commission;
+
     public static PaymentIntent Create(Guid tenantId, Guid payerId, string purpose, Guid referenceId, string? quoteId, string description, Money amount, Guid? payeeUserId, int commissionBps, string ruleCode)
     {
         var commission = amount.Percent(commissionBps / 100m, MidpointRounding.ToEven);
@@ -79,6 +94,39 @@ public sealed class PaymentIntent : Entity
             CommissionRuleCode = ruleCode,
             Commission = commission,
             PayeeNet = amount - commission,
+            TutorShare = Money.Zero(amount.Currency),
+            GatewayFee = Money.Zero(amount.Currency),
+            RefundedAmount = Money.Zero(amount.Currency),
+        };
+    }
+
+    /// <summary>
+    /// A sale of an organisation-owned course (ADR 0019). Commission as for a tutor sale; <paramref name="tutorShare"/> is the engaged tutor's
+    /// part (already computed on the net of commission and capped by the caller); the organisation receives the rest, never less than zero.
+    /// </summary>
+    public static PaymentIntent CreateForOrganisation(Guid tenantId, Guid payerId, string purpose, Guid referenceId, string? quoteId, string description, Money amount, Guid organisationId, Guid? tutorUserId, Guid? engagementId, Money tutorShare, int commissionBps, string ruleCode)
+    {
+        var commission = amount.Percent(commissionBps / 100m, MidpointRounding.ToEven);
+        var net = amount - commission;
+        var share = tutorUserId is null || tutorShare.IsNegative ? Money.Zero(amount.Currency) : (tutorShare > net ? net : tutorShare);
+        return new PaymentIntent(NewId(), tenantId)
+        {
+            PayerId = payerId,
+            Purpose = purpose,
+            ReferenceId = referenceId,
+            QuoteId = quoteId,
+            Description = description,
+            Amount = amount,
+            Status = PaymentStatus.Pending,
+            PayeeType = PayeeTypes.Organisation,
+            PayeeOrganisationId = organisationId,
+            PayeeUserId = tutorUserId,
+            EngagementId = engagementId,
+            CommissionBps = commissionBps,
+            CommissionRuleCode = ruleCode,
+            Commission = commission,
+            TutorShare = share,
+            PayeeNet = net - share,
             GatewayFee = Money.Zero(amount.Currency),
             RefundedAmount = Money.Zero(amount.Currency),
         };

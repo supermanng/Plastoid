@@ -10,7 +10,39 @@ internal static class PaymentPostings
 {
     private static string RevenueAccount(PaymentIntent intent) => intent.Purpose == PaymentPurposes.Booking ? AccountCodes.TutoringCommission : AccountCodes.CourseCommission;
 
-    /// <summary>Entry 1: learner pays by card. Dr 1030 gross; Cr 2010 (tutor) net; Cr 4010/4020 commission. Co-pay credits 2020 (programme).</summary>
+    /// <summary>
+    /// The credit side of a sale. Tutor sale: Cr 2010 (tutor) net, Cr 4010/4020 commission. Provider sale (ADR 0019): Cr 2010 (tutor) the tutor
+    /// share, Cr 2060 (organisation) the organisation net, Cr 4010 commission. Zero amounts post nothing.
+    /// </summary>
+    private static void AddSaleCredits(List<PostingDraft> postings, PaymentIntent intent)
+    {
+        if (intent.IsProviderSale)
+        {
+            if (!intent.TutorShare.IsZero)
+            {
+                postings.Add(PostingDraft.Cr(AccountCodes.TutorPayable, intent.TutorShare, SubLedgerOwnerTypes.Tutor, intent.PayeeUserId));
+            }
+
+            if (!intent.PayeeNet.IsZero)
+            {
+                postings.Add(PostingDraft.Cr(AccountCodes.ProviderPayable, intent.PayeeNet, SubLedgerOwnerTypes.Organisation, intent.PayeeOrganisationId));
+            }
+        }
+        else if (!intent.PayeeNet.IsZero)
+        {
+            postings.Add(PostingDraft.Cr(AccountCodes.TutorPayable, intent.PayeeNet, SubLedgerOwnerTypes.Tutor, intent.PayeeUserId));
+        }
+
+        if (!intent.Commission.IsZero)
+        {
+            postings.Add(PostingDraft.Cr(RevenueAccount(intent), intent.Commission));
+        }
+    }
+
+    /// <summary>
+    /// Entry 1: learner pays by card. Dr 1030 gross; Cr 2010 (tutor) net; Cr 4010/4020 commission. Co-pay credits 2020 (programme).
+    /// Provider variant (ADR 0019): Cr 2010 (tutor) the tutor share, Cr 2060 (organisation) the organisation net, Cr 4010 commission.
+    /// </summary>
     public static JournalEntryDraft Entry1Charge(PaymentIntent intent, DateTime occurredAt)
     {
         var postings = new List<PostingDraft> { PostingDraft.Dr(AccountCodes.GatewayReceivable, intent.Amount) };
@@ -20,15 +52,7 @@ internal static class PaymentPostings
         }
         else
         {
-            if (!intent.PayeeNet.IsZero)
-            {
-                postings.Add(PostingDraft.Cr(AccountCodes.TutorPayable, intent.PayeeNet, SubLedgerOwnerTypes.Tutor, intent.PayeeUserId));
-            }
-
-            if (!intent.Commission.IsZero)
-            {
-                postings.Add(PostingDraft.Cr(RevenueAccount(intent), intent.Commission));
-            }
+            AddSaleCredits(postings, intent);
         }
 
         return new JournalEntryDraft($"payment:{intent.Id:N}:charge", "payment_charge", $"{intent.Purpose} payment {intent.GatewayReference}", postings, occurredAt);
@@ -41,7 +65,8 @@ internal static class PaymentPostings
 
     /// <summary>
     /// Entry 12 (ADR 0018): a sale paid with units. Dr 2050 (wallet) the naira the units were bought for; Cr tutor payable / commission (or programme
-    /// funds for a co-pay) on the sale price; any gap between the two goes to 4060 (units bought at another rate, or whole-unit rounding).
+    /// funds for a co-pay; or tutor share, provider payable and commission for a provider sale, ADR 0019) on the sale price; any gap between the two
+    /// goes to 4060 (units bought at another rate, or whole-unit rounding).
     /// </summary>
     public static JournalEntryDraft Entry12UnitRedemption(PaymentIntent intent, DateTime occurredAt)
     {
@@ -53,15 +78,7 @@ internal static class PaymentPostings
         }
         else
         {
-            if (!intent.PayeeNet.IsZero)
-            {
-                postings.Add(PostingDraft.Cr(AccountCodes.TutorPayable, intent.PayeeNet, SubLedgerOwnerTypes.Tutor, intent.PayeeUserId));
-            }
-
-            if (!intent.Commission.IsZero)
-            {
-                postings.Add(PostingDraft.Cr(RevenueAccount(intent), intent.Commission));
-            }
+            AddSaleCredits(postings, intent);
         }
 
         AddRevaluation(postings, unitsValue, intent.Amount);
@@ -98,19 +115,41 @@ internal static class PaymentPostings
         => new($"sweep:{batchReference}", "revenue_sweep", "Earned commission swept to operating account",
             [PostingDraft.Dr(AccountCodes.BankOperating, amount), PostingDraft.Cr(AccountCodes.BankClientFunds, amount)], occurredAt);
 
-    /// <summary>Entry 5: refund reverses the tutor's and Plastoids' shares pro rata; cash leaves client funds (or the receivable if not yet settled).</summary>
+    /// <summary>
+    /// Entry 5: refund reverses the tutor's and Plastoids' shares pro rata; cash leaves client funds (or the receivable if not yet settled).
+    /// Provider sale (ADR 0019): commission, tutor share and organisation net reverse pro rata (half-kobo to even); the organisation takes the residue.
+    /// </summary>
     public static JournalEntryDraft Entry5Refund(PaymentIntent intent, Refund refund, DateTime occurredAt)
     {
         var fraction = (decimal)refund.Amount.AmountKobo / intent.Amount.AmountKobo;
-        var commissionShare = new Money((long)Math.Round(intent.Commission.AmountKobo * fraction, 0, MidpointRounding.ToEven), intent.Amount.Currency);
-        var tutorShare = refund.Amount - commissionShare;
+        var commissionShare = ProRata(intent.Commission, fraction);
         var postings = new List<PostingDraft>();
         if (intent.Purpose == PaymentPurposes.CoPay)
         {
             postings.Add(PostingDraft.Dr(AccountCodes.ProgrammeFundsHeld, refund.Amount, SubLedgerOwnerTypes.Programme, intent.ReferenceId));
         }
+        else if (intent.IsProviderSale)
+        {
+            var tutorShare = ProRata(intent.TutorShare, fraction);
+            var organisationShare = refund.Amount - commissionShare - tutorShare;
+            if (!tutorShare.IsZero)
+            {
+                postings.Add(PostingDraft.Dr(AccountCodes.TutorPayable, tutorShare, SubLedgerOwnerTypes.Tutor, intent.PayeeUserId));
+            }
+
+            if (!organisationShare.IsZero)
+            {
+                postings.Add(PostingDraft.Dr(AccountCodes.ProviderPayable, organisationShare, SubLedgerOwnerTypes.Organisation, intent.PayeeOrganisationId));
+            }
+
+            if (!commissionShare.IsZero)
+            {
+                postings.Add(PostingDraft.Dr(RevenueAccount(intent), commissionShare));
+            }
+        }
         else
         {
+            var tutorShare = refund.Amount - commissionShare;
             if (!tutorShare.IsZero)
             {
                 postings.Add(PostingDraft.Dr(AccountCodes.TutorPayable, tutorShare, SubLedgerOwnerTypes.Tutor, intent.PayeeUserId));
@@ -132,6 +171,8 @@ internal static class PaymentPostings
         });
         return new JournalEntryDraft($"refund:{refund.Id:N}", "refund", $"Refund of {intent.GatewayReference}: {refund.Reason}", postings, occurredAt);
     }
+
+    private static Money ProRata(Money amount, decimal fraction) => new((long)Math.Round(amount.AmountKobo * fraction, 0, MidpointRounding.ToEven), amount.Currency);
 
     /// <summary>Entry 6: sponsor pays an invoice. Dr 1020 amount; Cr 2020 (programme) the funds part; Cr 2040 the VAT part (VAT is credited last on partial payments).</summary>
     public static JournalEntryDraft Entry6InvoicePaid(Invoice invoice, Money amountReceived, DateTime occurredAt)

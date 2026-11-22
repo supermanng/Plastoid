@@ -14,6 +14,6 @@ internal static class PublishCourseEndpoint
         group.MapPost("/{courseId:guid}/publish", async (Guid courseId, ISender sender, CancellationToken ct) => (await sender.Send(new PublishCourseCommand(courseId), ct)).ToHttpResult())
             .WithName("PublishCourse")
             .WithSummary("Owner: publish an approved course as a new immutable version; emits catalogue.course-published.v1.")
-            .RequireAuthorization(Policies.Tutor);
+            .RequireAuthorization(Policies.Mfa); // ownership (tutor, organisation owner/author, staff) is decided by CourseAccess (ADR 0019 §2)
     }
 }

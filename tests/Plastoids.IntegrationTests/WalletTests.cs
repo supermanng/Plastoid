@@ -46,7 +46,7 @@ public class WalletTests(PlastoidsApiFactory factory)
     }
 
     /// <summary>Buys <paramref name="units"/> for the signed-in client (optionally for an organisation) and confirms the charge through the fake gateway; returns the wallet id once the consumer credited it.</summary>
-    private async Task<(Guid WalletId, Guid PaymentIntentId, long AmountKobo)> BuyUnitsAsync(HttpClient client, long units, Guid? organisationId = null)
+    internal async Task<(Guid WalletId, Guid PaymentIntentId, long AmountKobo)> BuyUnitsAsync(HttpClient client, long units, Guid? organisationId = null)
     {
         var walletPath = organisationId is null ? "/api/v1/wallet/me" : $"/api/v1/wallet/organisations/{organisationId}";
         var before = (await client.GetFromJsonAsync<JsonElement>(walletPath, Json)).GetProperty("balance").GetInt64();

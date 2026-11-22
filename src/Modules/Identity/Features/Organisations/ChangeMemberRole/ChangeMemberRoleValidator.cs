@@ -9,6 +9,6 @@ internal sealed class ChangeMemberRoleValidator : AbstractValidator<ChangeMember
     {
         RuleFor(x => x.OrganisationId).NotEmpty();
         RuleFor(x => x.UserId).NotEmpty();
-        RuleFor(x => x.Role).NotEmpty().Must(OrganisationRoles.IsValid).WithMessage("role must be owner, finance, reviewer or viewer.");
+        RuleFor(x => x.Role).NotEmpty().Must(OrganisationRoles.IsValid).WithMessage("role must be owner, finance, reviewer, viewer or author.");
     }
 }

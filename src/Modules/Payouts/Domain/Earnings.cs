@@ -1,3 +1,4 @@
+using Plastoids.Modules.Payments.Contracts;
 using Plastoids.SharedKernel.Domain;
 using Plastoids.SharedKernel.Results;
 
@@ -17,8 +18,9 @@ public enum EarningStatus
 }
 
 /// <summary>
-/// One tutor earning with its settlement hold (blueprint §18): course sales 7 days (refund window), sessions until Booking's
+/// One payee earning with its settlement hold (blueprint §18): course sales 7 days (refund window), sessions until Booking's
 /// 72-hour hold releases, sponsored teaching per delivered programme month. Net = gross − commission, less refunds.
+/// The payee is a tutor (user id) or, for sales of organisation-owned courses (ADR 0019), an organisation.
 /// </summary>
 public sealed class Earning : Entity
 {
@@ -30,7 +32,11 @@ public sealed class Earning : Entity
     {
     }
 
-    public Guid TutorUserId { get; private set; }
+    /// <summary>PayeeTypes.Tutor or PayeeTypes.Organisation.</summary>
+    public string PayeeType { get; private set; } = PayeeTypes.Tutor;
+
+    /// <summary>The tutor's user id or the organisation id, per PayeeType.</summary>
+    public Guid PayeeId { get; private set; }
     public string SourceType { get; private set; } = string.Empty;
     public Guid SourceId { get; private set; }
     public Guid? ReferenceId { get; private set; }
@@ -44,10 +50,11 @@ public sealed class Earning : Entity
     public DateTime? ReleasedAt { get; private set; }
     public EarningStatus Status { get; private set; }
 
-    public static Earning Record(Guid tenantId, Guid tutorUserId, string sourceType, Guid sourceId, Guid? referenceId, string sourceKey, Money gross, Money net, DateTime earnedAt, DateTime? releasesAt)
+    public static Earning Record(Guid tenantId, string payeeType, Guid payeeId, string sourceType, Guid sourceId, Guid? referenceId, string sourceKey, Money gross, Money net, DateTime earnedAt, DateTime? releasesAt)
         => new(NewId(), tenantId)
         {
-            TutorUserId = tutorUserId,
+            PayeeType = payeeType,
+            PayeeId = payeeId,
             SourceType = sourceType,
             SourceId = sourceId,
             ReferenceId = referenceId,
@@ -75,7 +82,7 @@ public sealed class Earning : Entity
         return true;
     }
 
-    /// <summary>A refund of part of the gross reduces the tutor's share pro rata (ledger entry 5 does the same on 2010).</summary>
+    /// <summary>A refund of part of the gross reduces the payee's share pro rata (ledger entry 5 does the same on 2010 / 2060).</summary>
     public void ApplyRefund(Money refundedGross)
     {
         if (Gross.IsZero || refundedGross.IsZero)
@@ -89,7 +96,7 @@ public sealed class Earning : Entity
     }
 }
 
-/// <summary>A dispute (or manual) hold on a tutor: no payout while open; auto-releases after at most 5 working days (blueprint §18).</summary>
+/// <summary>A dispute (or manual) hold on a payee (tutor or organisation): no payout while open; auto-releases after at most 5 working days (blueprint §18).</summary>
 public sealed class DisputeHold : Entity
 {
     public const int MaxWorkingDays = 5;
@@ -102,7 +109,8 @@ public sealed class DisputeHold : Entity
     {
     }
 
-    public Guid TutorUserId { get; private set; }
+    public string PayeeType { get; private set; } = PayeeTypes.Tutor;
+    public Guid PayeeId { get; private set; }
     public string Reason { get; private set; } = string.Empty;
     public Guid PlacedBy { get; private set; }
     public DateTime PlacedAt { get; private set; }
@@ -113,8 +121,8 @@ public sealed class DisputeHold : Entity
 
     public bool IsOpen => ReleasedAt is null;
 
-    public static DisputeHold Place(Guid tenantId, Guid tutorUserId, string reason, Guid placedBy, DateTime utcNow, DateTime releasesAt)
-        => new(NewId(), tenantId) { TutorUserId = tutorUserId, Reason = reason.Trim(), PlacedBy = placedBy, PlacedAt = utcNow, ReleasesAt = releasesAt };
+    public static DisputeHold Place(Guid tenantId, string payeeType, Guid payeeId, string reason, Guid placedBy, DateTime utcNow, DateTime releasesAt)
+        => new(NewId(), tenantId) { PayeeType = payeeType, PayeeId = payeeId, Reason = reason.Trim(), PlacedBy = placedBy, PlacedAt = utcNow, ReleasesAt = releasesAt };
 
     public Result Release(Guid releasedBy, string resolution, DateTime utcNow)
     {
@@ -234,7 +242,7 @@ public enum PayoutStatus
     Cancelled = 5,
 }
 
-/// <summary>One transfer to one tutor inside a batch.</summary>
+/// <summary>One transfer to one payee (tutor or organisation) inside a batch.</summary>
 public sealed class Payout : Entity
 {
     private Payout()
@@ -246,7 +254,8 @@ public sealed class Payout : Entity
     }
 
     public Guid BatchId { get; private set; }
-    public Guid TutorUserId { get; private set; }
+    public string PayeeType { get; private set; } = PayeeTypes.Tutor;
+    public Guid PayeeId { get; private set; }
     public Money Amount { get; private set; }
     public string BankCode { get; private set; } = string.Empty;
     public string AccountNumberMasked { get; private set; } = string.Empty;
@@ -261,10 +270,13 @@ public sealed class Payout : Entity
     public Guid? LedgerEntryId { get; private set; }
     public Guid? ReversalEntryId { get; private set; }
 
-    public static Payout Create(Guid tenantId, Guid batchId, Guid tutorUserId, Money amount, string bankCode, string accountNumberMasked, string accountName)
-        => new(NewId(), tenantId) { BatchId = batchId, TutorUserId = tutorUserId, Amount = amount, BankCode = bankCode, AccountNumberMasked = accountNumberMasked, AccountName = accountName, Status = PayoutStatus.Pending };
+    public static Payout Create(Guid tenantId, Guid batchId, string payeeType, Guid payeeId, Money amount, string bankCode, string accountNumberMasked, string accountName)
+        => new(NewId(), tenantId) { BatchId = batchId, PayeeType = payeeType, PayeeId = payeeId, Amount = amount, BankCode = bankCode, AccountNumberMasked = accountNumberMasked, AccountName = accountName, Status = PayoutStatus.Pending };
 
     public bool CountsAsPending => Status is PayoutStatus.Pending or PayoutStatus.Submitted;
+
+    /// <summary>The tutor's user id for a tutor payout; null for an organisation (no single recipient).</summary>
+    public Guid? TutorUserId => PayeeType == PayeeTypes.Tutor ? PayeeId : null;
 
     public void MarkSubmitted(string providerReference, DateTime utcNow)
     {
@@ -305,7 +317,7 @@ public sealed class Payout : Entity
         return Result.Success();
     }
 
-    /// <summary>A settled transfer bounced back (closed account, bank reversal): the money returns to the tutor's balance.</summary>
+    /// <summary>A settled transfer bounced back (closed account, bank reversal): the money returns to the payee's balance.</summary>
     public Result Reverse(string reason, Guid reversalEntryId, DateTime utcNow)
     {
         if (Status != PayoutStatus.Settled)

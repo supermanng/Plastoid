@@ -12,5 +12,9 @@ public sealed record CreatePaymentIntentCommand(string Purpose, string? QuoteId,
 
 public sealed record CreatePaymentIntentRequest(string Purpose, string? QuoteId, Guid? ReferenceId, Money? Amount, Guid? PayeeUserId, string? LearnerSource, bool PayWithUnits = false);
 
-/// <summary>payWithUnits=true settles from the signed-in user's unit wallet at once: Status "succeeded", CheckoutUrl null, UnitsCharged set (ADR 0018).</summary>
-public sealed record CreatePaymentIntentResponse(Guid PaymentIntentId, string Gateway, string GatewayReference, Uri? CheckoutUrl, Money Amount, int CommissionBps, string Status, string PaymentMethod = "gateway", long UnitsCharged = 0, long UnitRateKobo = 0);
+/// <summary>
+/// payWithUnits=true settles from the signed-in user's unit wallet at once: Status "succeeded", CheckoutUrl null, UnitsCharged set (ADR 0018).
+/// PayeeType "organisation" (ADR 0019): the course belongs to PayeeOrganisationId and TutorShare goes to the engaged tutor.
+/// </summary>
+public sealed record CreatePaymentIntentResponse(Guid PaymentIntentId, string Gateway, string GatewayReference, Uri? CheckoutUrl, Money Amount, int CommissionBps, string Status, string PaymentMethod = "gateway", long UnitsCharged = 0, long UnitRateKobo = 0,
+    string PayeeType = "tutor", Guid? PayeeOrganisationId = null, Money? TutorShare = null);

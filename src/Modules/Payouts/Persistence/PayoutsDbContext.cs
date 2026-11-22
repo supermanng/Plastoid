@@ -16,6 +16,7 @@ public sealed class PayoutsDbContext(DbContextOptions<PayoutsDbContext> options,
     public DbSet<PayoutBatch> Batches => Set<PayoutBatch>();
     public DbSet<Payout> Payouts => Set<Payout>();
     public DbSet<ProviderEvent> ProviderEvents => Set<ProviderEvent>();
+    public DbSet<OrganisationPayoutAccount> OrganisationAccounts => Set<OrganisationPayoutAccount>();
 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
@@ -23,11 +24,12 @@ public sealed class PayoutsDbContext(DbContextOptions<PayoutsDbContext> options,
         {
             b.ToTable("payouts_earnings");
             b.Ignore(x => x.PayableNet);
+            b.Property(x => x.PayeeType).HasMaxLength(16);
             b.Property(x => x.SourceType).HasMaxLength(16);
             b.Property(x => x.SourceKey).HasMaxLength(120);
             b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
             b.HasIndex(x => x.SourceKey).IsUnique();
-            b.HasIndex(x => new { x.TutorUserId, x.Status });
+            b.HasIndex(x => new { x.PayeeType, x.PayeeId, x.Status });
             b.HasIndex(x => x.SourceId);
             b.HasIndex(x => x.ReferenceId);
             b.HasIndex(x => new { x.Status, x.ReleasesAt });
@@ -37,9 +39,10 @@ public sealed class PayoutsDbContext(DbContextOptions<PayoutsDbContext> options,
         {
             b.ToTable("payouts_holds");
             b.Ignore(x => x.IsOpen);
+            b.Property(x => x.PayeeType).HasMaxLength(16);
             b.Property(x => x.Reason).HasMaxLength(1000);
             b.Property(x => x.Resolution).HasMaxLength(1000);
-            b.HasIndex(x => new { x.TutorUserId, x.ReleasedAt });
+            b.HasIndex(x => new { x.PayeeType, x.PayeeId, x.ReleasedAt });
         });
 
         modelBuilder.Entity<PayoutBatch>(b =>
@@ -57,6 +60,8 @@ public sealed class PayoutsDbContext(DbContextOptions<PayoutsDbContext> options,
         {
             b.ToTable("payouts_payouts");
             b.Ignore(x => x.CountsAsPending);
+            b.Ignore(x => x.TutorUserId);
+            b.Property(x => x.PayeeType).HasMaxLength(16);
             b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
             b.Property(x => x.BankCode).HasMaxLength(10);
             b.Property(x => x.AccountNumberMasked).HasMaxLength(20);
@@ -65,8 +70,18 @@ public sealed class PayoutsDbContext(DbContextOptions<PayoutsDbContext> options,
             b.Property(x => x.BankReference).HasMaxLength(80);
             b.Property(x => x.FailureReason).HasMaxLength(500);
             b.HasIndex(x => x.BatchId);
-            b.HasIndex(x => new { x.TutorUserId, x.Status });
+            b.HasIndex(x => new { x.PayeeType, x.PayeeId, x.Status });
             b.HasIndex(x => x.ProviderReference);
+        });
+
+        modelBuilder.Entity<OrganisationPayoutAccount>(b =>
+        {
+            b.ToTable("payouts_organisation_accounts");
+            b.Property(x => x.BankCode).HasMaxLength(10);
+            b.Property(x => x.AccountNumberCiphertext).HasMaxLength(512);
+            b.Property(x => x.AccountNumberMasked).HasMaxLength(20);
+            b.Property(x => x.AccountName).HasMaxLength(160);
+            b.HasIndex(x => x.OrganisationId).IsUnique();
         });
 
         modelBuilder.Entity<ProviderEvent>(b =>

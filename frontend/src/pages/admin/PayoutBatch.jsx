@@ -6,7 +6,7 @@ import { Alert, Breadcrumb, Button, Card, CardHeader, ConfirmDialog, KeyValue, L
 import { formatDateTime, formatMoney } from '../../lib/format';
 import { useAction } from '../../lib/hooks';
 import { adminApi, adminKeys, SKIP_REASONS } from '../../api/admin';
-import { AdminError, FourEyesNote, Id, useIsMaker, UserLink } from './_shared';
+import { AdminError, FourEyesNote, Id, PayeeLink, useIsMaker, UserLink } from './_shared';
 
 /** GET /admin/payouts/batches/{id} → BatchView; approve (checker ≠ maker), reject (reason), submit. */
 export default function PayoutBatch() {
@@ -65,7 +65,7 @@ export default function PayoutBatch() {
           rows={b.payouts}
           rowKey={(p) => p.payoutId}
           columns={[
-            { key: 'tutorUserId', header: 'Tutor', render: (p) => <><UserLink id={p.tutorUserId} /><div className="text-[11px] text-muted">{p.accountName} · {p.accountNumberMasked}</div></> },
+            { key: 'payee', header: 'Payee', render: (p) => <><PayeeLink row={p} /><div className="text-[11px] text-muted">{p.accountName} · {p.accountNumberMasked}</div></> },
             { key: 'amount', header: 'Amount', align: 'right', render: (p) => <span className="font-semibold">{formatMoney(p.amount)}</span> },
             { key: 'status', header: 'Status', render: (p) => <StatusPill status={p.status} /> },
             { key: 'providerReference', header: 'Provider ref', render: (p) => <span className="font-mono text-xs">{p.providerReference || '—'}</span> },
@@ -78,13 +78,13 @@ export default function PayoutBatch() {
 
       {b.skipped?.length ? (
         <Card className="mt-6">
-          <CardHeader title="Skipped tutors" description="Not included in this batch and why." />
-          <Table rows={b.skipped} rowKey={(s, i) => s.tutorUserId || i} columns={[{ key: 'tutorUserId', header: 'Tutor', render: (s) => <UserLink id={s.tutorUserId} /> }, { key: 'reason', header: 'Reason', render: (s) => SKIP_REASONS[s.reason] || s.reason || s.skipReason || '—' }, { key: 'payable', header: 'Payable', align: 'right', render: (s) => (s.payable ? formatMoney(s.payable) : '—') }]} />
+          <CardHeader title="Skipped payees" description="Not included in this batch and why." />
+          <Table rows={b.skipped} rowKey={(s, i) => s.payeeId || s.tutorUserId || i} columns={[{ key: 'payee', header: 'Payee', render: (s) => <PayeeLink row={s} /> }, { key: 'reason', header: 'Reason', render: (s) => SKIP_REASONS[s.reason] || s.reason || s.skipReason || '—' }, { key: 'payable', header: 'Payable', align: 'right', render: (s) => (s.payable ? formatMoney(s.payable) : '—') }]} />
         </Card>
       ) : null}
 
       <ConfirmDialog open={confirm === 'approve'} onClose={() => setConfirm(null)} title="Approve this batch?" description={`${b.count} payouts totalling ${formatMoney(b.total)} will be ready to submit.`} confirmLabel="Approve" tone="teal" loading={approve.isPending} error={approve.error} onConfirm={() => approve.mutate()} />
-      <ConfirmDialog open={confirm === 'reject'} onClose={() => setConfirm(null)} title="Reject this batch?" description="All payouts are cancelled and the amounts return to the tutors' balances." confirmLabel="Reject" tone="danger" reason loading={reject.isPending} error={reject.error} onConfirm={(reason) => reject.mutate(reason)} />
+      <ConfirmDialog open={confirm === 'reject'} onClose={() => setConfirm(null)} title="Reject this batch?" description="All payouts are cancelled and the amounts return to the payees' balances." confirmLabel="Reject" tone="danger" reason loading={reject.isPending} error={reject.error} onConfirm={(reason) => reject.mutate(reason)} />
       <ConfirmDialog open={confirm === 'submit'} onClose={() => setConfirm(null)} title="Submit to the payout provider?" description="Transfers are initiated now and cannot be recalled from here." confirmLabel="Submit" loading={submit.isPending} error={submit.error} onConfirm={() => submit.mutate()} />
     </div>
   );

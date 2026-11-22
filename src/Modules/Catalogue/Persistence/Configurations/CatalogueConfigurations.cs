@@ -34,6 +34,7 @@ internal sealed class CourseConfiguration : IEntityTypeConfiguration<Course>
         b.Property(x => x.RatingAverage).HasPrecision(4, 2);
         b.HasIndex(x => new { x.Status, x.Category });
         b.HasIndex(x => x.OwnerUserId);
+        b.HasIndex(x => x.OrganisationId);
         b.HasIndex(x => new { x.Title, x.Summary }).IsFullText().HasDatabaseName("ft_catalogue_courses_title_summary");
     }
 }
@@ -99,6 +100,25 @@ internal sealed class OfferingConfiguration : IEntityTypeConfiguration<Offering>
         b.Property(x => x.Format).HasMaxLength(16);
         b.Property(x => x.FundingTypes).AsJson("funding_types_json");
         b.HasIndex(x => new { x.CourseId, x.Active });
+        b.HasIndex(x => x.TutorUserId);
+        b.HasOne<Course>().WithMany().HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class EngagementConfiguration : IEntityTypeConfiguration<Engagement>
+{
+    public void Configure(EntityTypeBuilder<Engagement> b)
+    {
+        b.ToTable("catalogue_engagements");
+        b.Property(x => x.TermsKind).HasMaxLength(16);
+        b.Property(x => x.FixedFeeCurrency).HasColumnType("char(3)");
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+        b.Property(x => x.Note).HasMaxLength(500);
+        b.Property(x => x.EndReason).HasMaxLength(500);
+        b.Ignore(x => x.FixedFee);
+        b.HasIndex(x => new { x.CourseId, x.TutorUserId, x.Status });
+        b.HasIndex(x => new { x.OrganisationId, x.Status });
+        b.HasIndex(x => new { x.TutorUserId, x.Status });
         b.HasOne<Course>().WithMany().HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Cascade);
     }
 }

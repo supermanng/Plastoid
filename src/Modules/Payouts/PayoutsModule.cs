@@ -18,6 +18,8 @@ using Plastoids.Modules.Payouts.Features.Batches.ListPayoutQueue;
 using Plastoids.Modules.Payouts.Features.Batches.SubmitPayoutBatch;
 using Plastoids.Modules.Payouts.Features.Earnings.GetMyEarnings;
 using Plastoids.Modules.Payouts.Features.Holds.PlaceHold;
+using Plastoids.Modules.Payouts.Features.Organisations.GetOrganisationEarnings;
+using Plastoids.Modules.Payouts.Features.Organisations.SetOrganisationPayoutAccount;
 using Plastoids.Modules.Payouts.Jobs;
 using Plastoids.Modules.Payouts.Persistence;
 using Plastoids.Modules.Payouts.Services;
@@ -44,6 +46,8 @@ public sealed class PayoutsModule : IModule
     {
         services.Configure<PayoutOptions>(configuration.GetSection(PayoutOptions.SectionName));
         services.AddScoped<PayableCalculator>();
+        services.AddScoped<PayeeDestinations>();
+        services.AddScoped<EarningsStatements>();
         services.AddScoped<PayoutRunner>();
         services.AddScoped<PayoutSettlement>();
         services.AddScoped<IDisputeQueue, DisputeQueue>();
@@ -65,6 +69,10 @@ public sealed class PayoutsModule : IModule
         var payouts = endpoints.MapGroup("/payouts").WithTags("Payouts");
         GetMyEarningsEndpoints.Map(payouts);
         HandlePayoutStatusWebhookEndpoint.Map(payouts);
+
+        var organisations = payouts.MapGroup("/organisations/{organisationId:guid}");
+        SetOrganisationPayoutAccountEndpoint.Map(organisations);
+        GetOrganisationEarningsEndpoint.Map(organisations);
 
         var admin = endpoints.MapGroup("/admin/payouts").WithTags("Payouts (staff)");
         ListPayoutQueueEndpoint.Map(admin);

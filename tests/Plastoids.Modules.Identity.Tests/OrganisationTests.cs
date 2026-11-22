@@ -42,9 +42,10 @@ public class OrganisationTests
     }
 
     [Fact]
-    public void Organisation_roles_are_the_four_from_the_blueprint()
+    public void Organisation_roles_are_the_blueprint_four_plus_author()
     {
-        OrganisationRoles.All.Should().BeEquivalentTo(["owner", "finance", "reviewer", "viewer"]);
+        // ADR 0019 adds "author": may create and edit the organisation's courses and engage tutors.
+        OrganisationRoles.All.Should().BeEquivalentTo(["owner", "finance", "reviewer", "viewer", "author"]);
         OrganisationRoles.IsValid("admin").Should().BeFalse();
     }
 }

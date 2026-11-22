@@ -20,13 +20,14 @@ namespace Plastoids.Modules.Payouts.Features.Batches.CreatePayoutBatch;
 /// <summary>Maker step: draft the batch from payable balances (≥ ₦5,000, name-matched account, no open dispute, payouts not frozen).</summary>
 public sealed record CreatePayoutBatchCommand(string IdempotencyKey) : ICommand<BatchView>, IIdempotentCommand;
 
-public sealed record BatchPayoutView(Guid PayoutId, Guid TutorUserId, Money Amount, string Status, string AccountNumberMasked, string AccountName, string? ProviderReference, string? BankReference, string? FailureReason);
+/// <summary>One payout in a batch. PayeeType "tutor" | "organisation" with PayeeId; TutorUserId is the payee id for tutors (older clients) and null for organisations.</summary>
+public sealed record BatchPayoutView(Guid PayoutId, Guid? TutorUserId, Money Amount, string Status, string AccountNumberMasked, string AccountName, string? ProviderReference, string? BankReference, string? FailureReason, string PayeeType = "tutor", Guid PayeeId = default);
 
-public sealed record BatchView(Guid BatchId, string Reference, string Status, Guid CreatedBy, Guid? ApprovedBy, int Count, Money Total, string? Provider, DateTime CreatedAt, IReadOnlyList<BatchPayoutView> Payouts, IReadOnlyList<SkippedTutor> Skipped)
+public sealed record BatchView(Guid BatchId, string Reference, string Status, Guid CreatedBy, Guid? ApprovedBy, int Count, Money Total, string? Provider, DateTime CreatedAt, IReadOnlyList<BatchPayoutView> Payouts, IReadOnlyList<SkippedPayee> Skipped)
 {
-    public static BatchView From(PayoutBatch b, IEnumerable<Payout> payouts, IReadOnlyList<SkippedTutor>? skipped = null)
+    public static BatchView From(PayoutBatch b, IEnumerable<Payout> payouts, IReadOnlyList<SkippedPayee>? skipped = null)
         => new(b.Id, b.Reference, b.Status.ToString().ToLowerInvariant(), b.CreatedBy, b.ApprovedBy, b.Count, b.Total, b.Provider, b.CreatedAt,
-            payouts.Select(p => new BatchPayoutView(p.Id, p.TutorUserId, p.Amount, p.Status.ToString().ToLowerInvariant(), p.AccountNumberMasked, p.AccountName, p.ProviderReference, p.BankReference, p.FailureReason)).ToList(), skipped ?? []);
+            payouts.Select(p => new BatchPayoutView(p.Id, p.TutorUserId, p.Amount, p.Status.ToString().ToLowerInvariant(), p.AccountNumberMasked, p.AccountName, p.ProviderReference, p.BankReference, p.FailureReason, p.PayeeType, p.PayeeId)).ToList(), skipped ?? []);
 }
 
 public sealed record GetPayoutBatchQuery(Guid BatchId) : IQuery<BatchView>;

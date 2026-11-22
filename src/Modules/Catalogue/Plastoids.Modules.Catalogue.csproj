@@ -6,6 +6,7 @@
     <ProjectReference Include="../../Plastoids.SharedKernel/Plastoids.SharedKernel.csproj" />
     <ProjectReference Include="../../Plastoids.Infrastructure/Plastoids.Infrastructure.csproj" />
     <ProjectReference Include="../Tutors/Plastoids.Modules.Tutors.csproj" />
+    <ProjectReference Include="../Identity/Plastoids.Modules.Identity.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />

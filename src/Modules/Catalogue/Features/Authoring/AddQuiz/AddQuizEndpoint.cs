@@ -16,6 +16,6 @@ internal static class AddQuizEndpoint
                     .ToCreatedResult(r => $"/api/v1/catalogue/lessons/{r.LessonId}"))
             .WithName("AddQuiz")
             .WithSummary("Owner: add a multiple-choice quiz (questions, options, correct index, pass mark).")
-            .RequireAuthorization(Policies.Tutor);
+            .RequireAuthorization(Policies.Mfa); // ownership (tutor, organisation owner/author, staff) is decided by CourseAccess (ADR 0019 §2)
     }
 }

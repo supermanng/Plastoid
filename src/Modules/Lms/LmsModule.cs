@@ -55,6 +55,7 @@ public sealed class LmsModule : IModule
         services.AddScoped<EnrolmentService>();
         services.AddScoped<ProgressService>();
         services.AddScoped<LmsAccess>();
+        services.AddScoped<TeachingAccess>();
         services.AddScoped<CohortMembership>();
         // Replaces Catalogue's stub: reviews now need a real enrolment with ≥30 % progress.
         services.AddScoped<IEnrolmentProgress, LmsEnrolmentProgress>();

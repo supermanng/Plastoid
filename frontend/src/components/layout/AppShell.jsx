@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import {
   Award, BarChart3, Bell, BookOpen, Briefcase, Building2, CalendarDays, ChevronDown, ClipboardList, Compass, CreditCard,
   FolderKanban, GraduationCap, Home, Landmark, LayoutDashboard, LogOut, MessageSquare, Settings, ShieldCheck,
-  Sparkles, User, Users, Wallet, Flag, History, Receipt, Percent, KeyRound, Mail, Coins,
+  Sparkles, User, Users, Wallet, Flag, History, Receipt, Percent, KeyRound, Mail, Coins, Banknote, Handshake,
 } from 'lucide-react';
 import { Logo, LogoMark } from '../Logo';
 import { Avatar } from '../ui';
@@ -40,6 +40,7 @@ const NAVS = {
       { to: '/tutor', label: 'Home', icon: Home, end: true, mobile: true },
       { to: '/tutor/sessions', label: 'Classes', icon: CalendarDays, mobile: true },
       { to: '/tutor/courses', label: 'Courses', icon: BookOpen },
+      { to: '/tutor/offers', label: 'Offers', icon: Handshake },
       { to: '/tutor/cohorts', label: 'Students', icon: Users, mobile: true },
       { to: '/tutor/earnings', label: 'Earnings', icon: Wallet, mobile: true },
       { to: '/learn/wallet', label: 'Wallet', icon: Coins },
@@ -52,9 +53,11 @@ const NAVS = {
     items: [
       { to: '/sponsor', label: 'Overview', icon: LayoutDashboard, end: true, mobile: true },
       { to: '/sponsor/programmes', label: 'Programmes', icon: FolderKanban, mobile: true },
+      { to: '/sponsor/courses', label: 'Courses', icon: BookOpen, mobile: true },
       { to: '/sponsor/organisation', label: 'Organisation', icon: Building2, mobile: true },
-      { to: '/sponsor/invoices', label: 'Invoices', icon: Receipt, mobile: true },
+      { to: '/sponsor/invoices', label: 'Invoices', icon: Receipt },
       { to: '/sponsor/wallet', label: 'Wallet', icon: Coins },
+      { to: '/sponsor/payouts', label: 'Payouts', icon: Banknote },
       { to: '/learn/profile', label: 'Profile', icon: User, mobile: true },
     ],
   },

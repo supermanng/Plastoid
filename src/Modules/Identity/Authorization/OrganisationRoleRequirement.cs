@@ -17,6 +17,9 @@ public static class IdentityPolicies
 
     /// <summary>Owner or finance: may create invoices and pay (blueprint §9.5 roles).</summary>
     public const string OrganisationFinance = "organisation-finance";
+
+    /// <summary>Owner or author: may create and edit the organisation's courses and engage tutors (ADR 0019).</summary>
+    public const string OrganisationAuthor = "organisation-author";
 }
 
 /// <summary>Build prompt §2.10: ownership is evaluated in an IAuthorizationHandler per resource type, not in handlers.</summary>

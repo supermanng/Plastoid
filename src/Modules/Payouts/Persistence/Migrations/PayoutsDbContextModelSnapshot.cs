@@ -124,6 +124,16 @@ namespace Plastoids.Modules.Payouts.Persistence.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
 
+                    b.Property<Guid>("PayeeId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("payee_id");
+
+                    b.Property<string>("PayeeType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("payee_type");
+
                     b.Property<DateTime>("PlacedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("placed_at");
@@ -164,10 +174,6 @@ namespace Plastoids.Modules.Payouts.Persistence.Migrations
                         .HasColumnType("binary(16)")
                         .HasColumnName("tenant_id");
 
-                    b.Property<Guid>("TutorUserId")
-                        .HasColumnType("binary(16)")
-                        .HasColumnName("tutor_user_id");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
@@ -178,8 +184,8 @@ namespace Plastoids.Modules.Payouts.Persistence.Migrations
                     b.HasIndex("TenantId")
                         .HasDatabaseName("ix_payouts_holds_tenant_id");
 
-                    b.HasIndex("TutorUserId", "ReleasedAt")
-                        .HasDatabaseName("ix_payouts_holds_tutor_user_id_released_at");
+                    b.HasIndex("PayeeType", "PayeeId", "ReleasedAt")
+                        .HasDatabaseName("ix_payouts_holds_payee_type_payee_id_released_at");
 
                     b.ToTable("payouts_holds", (string)null);
                 });
@@ -198,6 +204,16 @@ namespace Plastoids.Modules.Payouts.Persistence.Migrations
                     b.Property<DateTime>("EarnedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("earned_at");
+
+                    b.Property<Guid>("PayeeId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("payee_id");
+
+                    b.Property<string>("PayeeType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("payee_type");
 
                     b.Property<Guid?>("ReferenceId")
                         .HasColumnType("binary(16)")
@@ -241,10 +257,6 @@ namespace Plastoids.Modules.Payouts.Persistence.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("binary(16)")
                         .HasColumnName("tenant_id");
-
-                    b.Property<Guid>("TutorUserId")
-                        .HasColumnType("binary(16)")
-                        .HasColumnName("tutor_user_id");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
@@ -317,10 +329,83 @@ namespace Plastoids.Modules.Payouts.Persistence.Migrations
                     b.HasIndex("Status", "ReleasesAt")
                         .HasDatabaseName("ix_payouts_earnings_status_releases_at");
 
-                    b.HasIndex("TutorUserId", "Status")
-                        .HasDatabaseName("ix_payouts_earnings_tutor_user_id_status");
+                    b.HasIndex("PayeeType", "PayeeId", "Status")
+                        .HasDatabaseName("ix_payouts_earnings_payee_type_payee_id_status");
 
                     b.ToTable("payouts_earnings", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Payouts.Domain.OrganisationPayoutAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("varchar(160)")
+                        .HasColumnName("account_name");
+
+                    b.Property<string>("AccountNumberCiphertext")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)")
+                        .HasColumnName("account_number_ciphertext");
+
+                    b.Property<string>("AccountNumberMasked")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("account_number_masked");
+
+                    b.Property<string>("BankCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("bank_code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("NameMatched")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("name_matched");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("organisation_id");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTime>("VerifiedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("verified_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payouts_organisation_accounts");
+
+                    b.HasIndex("OrganisationId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_payouts_organisation_accounts_organisation_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_payouts_organisation_accounts_tenant_id");
+
+                    b.ToTable("payouts_organisation_accounts", (string)null);
                 });
 
             modelBuilder.Entity("Plastoids.Modules.Payouts.Domain.Payout", b =>
@@ -374,6 +459,16 @@ namespace Plastoids.Modules.Payouts.Persistence.Migrations
                         .HasColumnType("binary(16)")
                         .HasColumnName("ledger_entry_id");
 
+                    b.Property<Guid>("PayeeId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("payee_id");
+
+                    b.Property<string>("PayeeType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("payee_type");
+
                     b.Property<string>("ProviderReference")
                         .HasMaxLength(80)
                         .HasColumnType("varchar(80)")
@@ -406,10 +501,6 @@ namespace Plastoids.Modules.Payouts.Persistence.Migrations
                         .HasColumnType("binary(16)")
                         .HasColumnName("tenant_id");
 
-                    b.Property<Guid>("TutorUserId")
-                        .HasColumnType("binary(16)")
-                        .HasColumnName("tutor_user_id");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
@@ -438,8 +529,8 @@ namespace Plastoids.Modules.Payouts.Persistence.Migrations
                     b.HasIndex("TenantId")
                         .HasDatabaseName("ix_payouts_payouts_tenant_id");
 
-                    b.HasIndex("TutorUserId", "Status")
-                        .HasDatabaseName("ix_payouts_payouts_tutor_user_id_status");
+                    b.HasIndex("PayeeType", "PayeeId", "Status")
+                        .HasDatabaseName("ix_payouts_payouts_payee_type_payee_id_status");
 
                     b.ToTable("payouts_payouts", (string)null);
                 });

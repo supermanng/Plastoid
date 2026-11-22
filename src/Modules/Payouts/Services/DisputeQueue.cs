@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Plastoids.Infrastructure.Persistence;
+using Plastoids.Modules.Payments.Contracts;
 using Plastoids.Modules.Payouts.Contracts;
 using Plastoids.Modules.Payouts.Persistence;
 
@@ -15,7 +16,7 @@ internal sealed class DisputeQueue(PayoutsDbContext db, IUnitOfWork unitOfWork) 
         }
 
         return await db.Holds.AsNoTracking().Where(h => h.ReleasedAt == null).OrderBy(h => h.ReleasesAt).Take(Math.Clamp(limit, 1, 200))
-            .Select(h => new DisputeHoldItem(h.Id, h.TutorUserId, h.Reason, h.PlacedBy, h.PlacedAt, h.ReleasesAt, h.ReleasesAt < utcNow))
+            .Select(h => new DisputeHoldItem(h.Id, h.PayeeType == PayeeTypes.Tutor ? (Guid?)h.PayeeId : null, h.Reason, h.PlacedBy, h.PlacedAt, h.ReleasesAt, h.ReleasesAt < utcNow, h.PayeeType, h.PayeeId))
             .ToListAsync(cancellationToken);
     }
 }

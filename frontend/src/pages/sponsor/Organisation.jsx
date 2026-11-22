@@ -10,7 +10,8 @@ import { OrganisationWalletCard } from './PayFromWallet';
 
 const ROLES = [
   ['owner', 'Owner: everything, including publishing and members'],
-  ['finance', 'Finance: approve quotes, issue and view invoices'],
+  ['finance', 'Finance: approve quotes, issue and view invoices, payout account'],
+  ['author', 'Author: create and edit courses, engage tutors'],
   ['member', 'Member: build campaigns and view reports'],
 ];
 

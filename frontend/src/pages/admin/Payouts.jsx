@@ -6,14 +6,14 @@ import { Alert, Button, Card, CardHeader, EmptyState, Field, Input, Loading, Mod
 import { formatDateTime, formatMoney } from '../../lib/format';
 import { useAction } from '../../lib/hooks';
 import { adminApi, adminKeys, SKIP_REASONS } from '../../api/admin';
-import { AdminError, Id, UserLink } from './_shared';
+import { AdminError, Id, PayeeLink } from './_shared';
 
 /** GET /admin/payouts/queue → PayoutQueueView { payoutsFrozen, minimumPayout, tutors: QueueTutor[], openBatches: QueueBatch[] }. */
 export default function Payouts() {
   const navigate = useNavigate();
   const q = useQuery({ queryKey: adminKeys.payoutQueue, queryFn: adminApi.payoutQueue });
   const disputes = useQuery({ queryKey: adminKeys.disputeQueue, queryFn: () => adminApi.disputeQueue() });
-  const [holdFor, setHoldFor] = useState(null); // tutorUserId or '' for manual entry
+  const [holdFor, setHoldFor] = useState(null); // { payeeType, payeeId } or '' for manual entry
   const [reason, setReason] = useState('');
   const [tutorInput, setTutorInput] = useState('');
 
@@ -23,7 +23,7 @@ export default function Payouts() {
     invalidate,
     onSuccess: (b) => navigate(`/admin/payouts/${b.batchId}`),
   });
-  const place = useAction(() => adminApi.placeHold(holdFor || tutorInput.trim(), reason.trim()), { success: 'Dispute hold placed', invalidate, onSuccess: () => { setHoldFor(null); setReason(''); setTutorInput(''); } });
+  const place = useAction(() => adminApi.placeHold(holdFor || { payeeType: 'tutor', payeeId: tutorInput.trim() }, reason.trim()), { success: 'Dispute hold placed', invalidate, onSuccess: () => { setHoldFor(null); setReason(''); setTutorInput(''); } });
 
   if (q.isPending) return <Loading />;
   if (q.isError) return <AdminError error={q.error} />;
@@ -74,18 +74,18 @@ export default function Payouts() {
       </Card>
 
       <Card className="mt-6">
-        <CardHeader title="Tutors in the next run" description="Payable = released net earnings − paid − pending, capped by the ledger balance. Skipped tutors show why." />
+        <CardHeader title="Payees in the next run" description="Tutors (2010) and organisations (2060). Payable = released net earnings − paid − pending, capped by the ledger balance. Skipped payees show why." />
         {v.tutors.length ? (
           <Table
             rows={v.tutors}
-            rowKey={(t) => t.tutorUserId}
+            rowKey={(t) => `${t.payeeType || 'tutor'}:${t.payeeId || t.tutorUserId}`}
             columns={[
-              { key: 'tutorUserId', header: 'Tutor', render: (t) => <><UserLink id={t.tutorUserId} />{t.accountNumberMasked ? <div className="text-[11px] text-muted">acct {t.accountNumberMasked}</div> : null}</> },
+              { key: 'payee', header: 'Payee', render: (t) => <><PayeeLink row={t} />{t.accountNumberMasked ? <div className="text-[11px] text-muted">acct {t.accountNumberMasked}</div> : null}</> },
               { key: 'payable', header: 'Payable', align: 'right', render: (t) => <span className="font-semibold">{formatMoney(t.payable)}</span> },
               { key: 'held', header: 'Held', align: 'right', render: (t) => formatMoney(t.held) },
               { key: 'pending', header: 'Pending', align: 'right', render: (t) => formatMoney(t.pending) },
               { key: 'eligible', header: 'This run', render: (t) => (t.eligible ? <StatusPill tone="success" status="eligible" /> : <StatusPill tone="warn" status={t.skipReason || 'skipped'} label={SKIP_REASONS[t.skipReason] || t.skipReason || 'Skipped'} />) },
-              { key: 'act', header: '', align: 'right', render: (t) => <Button size="sm" variant="ghost" onClick={() => setHoldFor(t.tutorUserId)}>Hold</Button> },
+              { key: 'act', header: '', align: 'right', render: (t) => <Button size="sm" variant="ghost" onClick={() => setHoldFor({ payeeType: t.payeeType || 'tutor', payeeId: t.payeeId || t.tutorUserId })}>Hold</Button> },
             ]}
           />
         ) : (
@@ -96,7 +96,7 @@ export default function Payouts() {
       <Card className="mt-6">
         <CardHeader title="Open dispute holds" description="Holds auto-release on their date; release early with a resolution from Queues → Disputes." action={<Link to="/admin/queues?tab=disputes" className="text-sm font-semibold text-royal">Manage</Link>} />
         {disputes.data?.holds?.length ? (
-          <Table rows={disputes.data.holds} rowKey={(h) => h.holdId} columns={[{ key: 'tutorUserId', header: 'Tutor', render: (h) => <UserLink id={h.tutorUserId} /> }, { key: 'reason', header: 'Reason' }, { key: 'placedAt', header: 'Placed', render: (h) => <span className="text-xs text-muted">{formatDateTime(h.placedAt)}</span> }, { key: 'releasesAt', header: 'Releases', render: (h) => <span className="text-xs text-muted">{formatDateTime(h.releasesAt)}</span> }]} />
+          <Table rows={disputes.data.holds} rowKey={(h) => h.holdId} columns={[{ key: 'payee', header: 'Payee', render: (h) => <PayeeLink row={h} /> }, { key: 'reason', header: 'Reason' }, { key: 'placedAt', header: 'Placed', render: (h) => <span className="text-xs text-muted">{formatDateTime(h.placedAt)}</span> }, { key: 'releasesAt', header: 'Releases', render: (h) => <span className="text-xs text-muted">{formatDateTime(h.releasesAt)}</span> }]} />
         ) : (
           <p className="text-sm text-muted">No open holds.</p>
         )}
@@ -106,12 +106,12 @@ export default function Payouts() {
         open={holdFor !== null}
         onClose={() => setHoldFor(null)}
         title="Place a dispute hold"
-        description="Freezes this tutor's payouts until released or the auto-release date. Audited."
+        description="Freezes this payee's payouts until released or the auto-release date. Audited."
         size="sm"
         footer={<><Button variant="secondary" onClick={() => setHoldFor(null)}>Cancel</Button><Button variant="danger" loading={place.isPending} disabled={!(holdFor || tutorInput.trim()) || !reason.trim()} onClick={() => place.mutate()}>Place hold</Button></>}
       >
         <AdminError error={place.error} className="mb-3" />
-        {holdFor ? <p className="mb-3 text-sm">Tutor <Id value={holdFor} /></p> : (
+        {holdFor ? <p className="mb-3 text-sm">{holdFor.payeeType === 'organisation' ? 'Organisation' : 'Tutor'} <Id value={holdFor.payeeId} /></p> : (
           <Field label="Tutor user id" required>{(p) => <Input {...p} className="font-mono text-xs" value={tutorInput} onChange={(e) => setTutorInput(e.target.value)} placeholder="GUID" />}</Field>
         )}
         <Field label="Reason" required className="mt-3">{(p) => <Textarea {...p} rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />}</Field>

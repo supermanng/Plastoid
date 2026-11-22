@@ -10,7 +10,6 @@ using Plastoids.Infrastructure.Security;
 using Plastoids.Modules.Payouts.Domain;
 using Plastoids.Modules.Payouts.Persistence;
 using Plastoids.Modules.Payouts.Services;
-using Plastoids.Modules.Tutors.Contracts;
 using Plastoids.SharedKernel.Cqrs;
 using Plastoids.SharedKernel.Results;
 using Plastoids.SharedKernel.Time;
@@ -31,7 +30,7 @@ internal sealed class SubmitPayoutBatchValidator : AbstractValidator<SubmitPayou
     }
 }
 
-internal sealed class SubmitPayoutBatchHandler(PayoutsDbContext db, IPayoutProvider provider, ITutorPayoutAccounts accounts, PayoutSettlement settlement, IClock clock) : ICommandHandler<SubmitPayoutBatchCommand, SubmitPayoutBatchResponse>
+internal sealed class SubmitPayoutBatchHandler(PayoutsDbContext db, IPayoutProvider provider, PayeeDestinations destinations, PayoutSettlement settlement, IClock clock) : ICommandHandler<SubmitPayoutBatchCommand, SubmitPayoutBatchResponse>
 {
     public async Task<Result<SubmitPayoutBatchResponse>> Handle(SubmitPayoutBatchCommand request, CancellationToken cancellationToken)
     {
@@ -53,7 +52,7 @@ internal sealed class SubmitPayoutBatchHandler(PayoutsDbContext db, IPayoutProvi
         foreach (var payout in payouts)
         {
             // The full account number is read at submission time only; it is never stored on the payout.
-            var account = await accounts.GetAsync(payout.TutorUserId, cancellationToken);
+            var account = await destinations.GetAsync(payout.PayeeType, payout.PayeeId, cancellationToken);
             if (account is null)
             {
                 payout.Fail("Payout account removed before submission", now);

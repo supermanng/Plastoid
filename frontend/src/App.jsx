@@ -63,6 +63,7 @@ const TutorCohorts = lazy(() => import('./pages/tutor/Cohorts'));
 const CohortDetail = lazy(() => import('./pages/tutor/CohortDetail'));
 const TutorSessions = lazy(() => import('./pages/tutor/Sessions'));
 const Earnings = lazy(() => import('./pages/tutor/Earnings'));
+const TutorOffers = lazy(() => import('./pages/tutor/Offers'));
 
 // Sponsor
 const SponsorDashboard = lazy(() => import('./pages/sponsor/Dashboard'));
@@ -74,6 +75,10 @@ const ProgrammeDetail = lazy(() => import('./pages/sponsor/ProgrammeDetail'));
 const SponsorInvoices = lazy(() => import('./pages/sponsor/Invoices'));
 const SponsorWallet = lazy(() => import('./pages/sponsor/Wallet'));
 const InvoiceDetail = lazy(() => import('./pages/sponsor/InvoiceDetail'));
+const SponsorCourses = lazy(() => import('./pages/sponsor/Courses'));
+const SponsorCourseEditor = lazy(() => import('./pages/sponsor/CourseEditor'));
+const SponsorCourseTutors = lazy(() => import('./pages/sponsor/CourseTutors'));
+const SponsorPayouts = lazy(() => import('./pages/sponsor/Payouts'));
 
 // Back office
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -174,6 +179,7 @@ export default function App() {
             <Route path="cohorts/:cohortId" element={<CohortDetail />} />
             <Route path="sessions" element={<TutorSessions />} />
             <Route path="earnings" element={<Earnings />} />
+            <Route path="offers" element={<TutorOffers />} />
           </Route>
         </Route>
 
@@ -192,6 +198,11 @@ export default function App() {
             <Route path="invoices" element={<SponsorInvoices />} />
             <Route path="wallet" element={<SponsorWallet />} />
             <Route path="invoices/:invoiceId" element={<InvoiceDetail />} />
+            <Route path="courses" element={<SponsorCourses />} />
+            <Route path="courses/new" element={<SponsorCourseEditor />} />
+            <Route path="courses/:courseId" element={<SponsorCourseEditor />} />
+            <Route path="courses/:courseId/tutors" element={<SponsorCourseTutors />} />
+            <Route path="payouts" element={<SponsorPayouts />} />
           </Route>
         </Route>
 

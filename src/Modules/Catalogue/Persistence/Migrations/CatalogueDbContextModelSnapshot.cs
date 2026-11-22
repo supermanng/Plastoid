@@ -150,6 +150,10 @@ namespace Plastoids.Modules.Catalogue.Persistence.Migrations
                         .HasColumnType("varchar(16)")
                         .HasColumnName("level");
 
+                    b.Property<Guid?>("OrganisationId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("organisation_id");
+
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("binary(16)")
                         .HasColumnName("owner_id");
@@ -229,6 +233,9 @@ namespace Plastoids.Modules.Catalogue.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_catalogue_courses");
+
+                    b.HasIndex("OrganisationId")
+                        .HasDatabaseName("ix_catalogue_courses_organisation_id");
 
                     b.HasIndex("OwnerUserId")
                         .HasDatabaseName("ix_catalogue_courses_owner_user_id");
@@ -430,6 +437,114 @@ namespace Plastoids.Modules.Catalogue.Persistence.Migrations
                     b.ToTable("catalogue_course_versions", (string)null);
                 });
 
+            modelBuilder.Entity("Plastoids.Modules.Catalogue.Domain.Engagement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("course_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("EndReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("end_reason");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("ended_at");
+
+                    b.Property<string>("FixedFeeCurrency")
+                        .HasColumnType("char(3)")
+                        .HasColumnName("fixed_fee_currency");
+
+                    b.Property<long?>("FixedFeeKobo")
+                        .HasColumnType("bigint")
+                        .HasColumnName("fixed_fee_kobo");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("note");
+
+                    b.Property<DateTime>("OfferedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("offered_at");
+
+                    b.Property<Guid>("OfferedBy")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("offered_by");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("organisation_id");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("responded_at");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<int>("ShareBps")
+                        .HasColumnType("int")
+                        .HasColumnName("share_bps");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("TermsKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("terms_kind");
+
+                    b.Property<Guid>("TutorId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tutor_id");
+
+                    b.Property<Guid>("TutorUserId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tutor_user_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_catalogue_engagements");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_catalogue_engagements_tenant_id");
+
+                    b.HasIndex("OrganisationId", "Status")
+                        .HasDatabaseName("ix_catalogue_engagements_organisation_id_status");
+
+                    b.HasIndex("TutorUserId", "Status")
+                        .HasDatabaseName("ix_catalogue_engagements_tutor_user_id_status");
+
+                    b.HasIndex("CourseId", "TutorUserId", "Status")
+                        .HasDatabaseName("ix_catalogue_engagements_course_id_tutor_user_id_status");
+
+                    b.ToTable("catalogue_engagements", (string)null);
+                });
+
             modelBuilder.Entity("Plastoids.Modules.Catalogue.Domain.Lesson", b =>
                 {
                     b.Property<Guid>("Id")
@@ -617,6 +732,10 @@ namespace Plastoids.Modules.Catalogue.Persistence.Migrations
                         .HasColumnType("int")
                         .HasColumnName("duration_weeks");
 
+                    b.Property<Guid?>("EngagementId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("engagement_id");
+
                     b.Property<string>("Format")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -641,6 +760,10 @@ namespace Plastoids.Modules.Catalogue.Persistence.Migrations
                         .HasColumnType("binary(16)")
                         .HasColumnName("tenant_id");
 
+                    b.Property<Guid?>("TutorUserId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tutor_user_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
@@ -662,6 +785,9 @@ namespace Plastoids.Modules.Catalogue.Persistence.Migrations
 
                     b.HasIndex("TenantId")
                         .HasDatabaseName("ix_catalogue_offerings_tenant_id");
+
+                    b.HasIndex("TutorUserId")
+                        .HasDatabaseName("ix_catalogue_offerings_tutor_user_id");
 
                     b.HasIndex("CourseId", "Active")
                         .HasDatabaseName("ix_catalogue_offerings_course_id_active");
@@ -819,6 +945,16 @@ namespace Plastoids.Modules.Catalogue.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_catalogue_course_versions_catalogue_courses_course_id");
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Catalogue.Domain.Engagement", b =>
+                {
+                    b.HasOne("Plastoids.Modules.Catalogue.Domain.Course", null)
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_catalogue_engagements_catalogue_courses_course_id");
                 });
 
             modelBuilder.Entity("Plastoids.Modules.Catalogue.Domain.Lesson", b =>

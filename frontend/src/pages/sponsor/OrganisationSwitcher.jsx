@@ -52,11 +52,12 @@ export function VerificationBanner({ org }) {
 
 /** Explains why an owner-only / finance-only control is disabled. */
 export function RoleHint({ org, needs = 'owner' }) {
-  const allowed = needs === 'finance' ? org.isFinance : org.isOwner;
+  const allowed = needs === 'finance' ? org.isFinance : needs === 'author' ? org.isAuthor : org.isOwner;
   if (allowed) return null;
+  const who = { finance: 'owner or finance member', author: 'owner or author', owner: 'owner' }[needs] || 'owner';
   return (
     <p className="text-xs text-muted">
-      Only an organisation {needs === 'finance' ? 'owner or finance member' : 'owner'} can do this. Your role: <span className="font-semibold capitalize">{org.role || 'member'}</span>.
+      Only an organisation {who} can do this. Your role: <span className="font-semibold capitalize">{org.role || 'member'}</span>.
     </p>
   );
 }

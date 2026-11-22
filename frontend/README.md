@@ -39,8 +39,8 @@ src/
   pages/public        home, courses, compare, course detail, opportunities, tutors, booking, verify, marketing pages
   pages/auth          phone OTP sign-in, staff email sign-in, MFA enrol/challenge, no-access
   pages/learn         dashboard, onboarding, my courses + player (video/doc/quiz/assignment), applications, bookings, certificates, payments, messages, notifications, profile
-  pages/tutor         onboarding (5 verification stages), dashboard, profile (availability/pricing/payout account), courses + lesson builder, gradebook, cohorts, sessions, earnings
-  pages/sponsor       register organisation, dashboard, organisation members, programmes, campaign stepper, programme detail (budget/funnel/report), invoices
+  pages/tutor         onboarding (5 verification stages), dashboard, profile (availability/pricing/payout account), courses + lesson builder (shared with the organisation portal), offers (engagements), gradebook, cohorts, sessions, earnings
+  pages/sponsor       register organisation, dashboard, organisation members, programmes, campaign stepper, programme detail (budget/funnel/report), invoices, courses + editor + course tutors (engagements), payouts (ADR 0019)
   pages/admin         dashboard, queues, users, tutors, sponsors, programmes + applications review, course moderation, finance (ledger/reconciliation/settlements/refunds), payouts, fee rules, role grants, templates, feature flags, compliance, audit
 ```
 
@@ -63,4 +63,4 @@ The image serves `dist/` with nginx and proxies `/api/` and `/health/` to `API_U
 
 ## Known gaps (backend reads the UI works around)
 
-Recorded in `docs/adr/0017-react-frontend.md`: no "my courses / my cohorts / my programmes / my invoices" list endpoints (pages remember ids created in this browser and offer open-by-id), no single-tutor or single-opportunity public read (pages search the list), the video SDK and HLS player are not embedded (join details and stream URLs are shown).
+Recorded in `docs/adr/0017-react-frontend.md`: no "my cohorts / my programmes / my invoices" list endpoints (pages remember ids created in this browser and offer open-by-id), no single-tutor or single-opportunity public read (pages search the list), the video SDK and HLS player are not embedded (join details and stream URLs are shown). Courses are listed from `GET /catalogue/courses/mine` and `GET /catalogue/organisations/{id}/courses` and drafts load from the authoring view since ADR 0019, so the browser no longer remembers course ids.

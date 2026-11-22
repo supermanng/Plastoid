@@ -28,7 +28,7 @@ internal sealed class RegisterOrganisationHandler(IdentityDbContext db, ICurrent
         db.Organisations.Add(organisation);
         db.Memberships.Add(Membership.Organisation(tenant.TenantId, user.Id, organisation.Id, OrganisationRoles.Owner, user.Id));
 
-        var platformRole = type == OrganisationType.Sponsor || type == OrganisationType.Employer ? RoleNames.Sponsor : null;
+        var platformRole = type is OrganisationType.Sponsor or OrganisationType.Employer or OrganisationType.Provider ? RoleNames.Sponsor : null; // the organisation portal is the "sponsor" area (ADR 0019)
         if (platformRole is not null && !await db.Memberships.AnyAsync(m => m.UserId == user.Id && m.OrganisationId == null && m.Role == platformRole, cancellationToken))
         {
             db.Memberships.Add(Membership.Platform(tenant.TenantId, user.Id, platformRole, user.Id));

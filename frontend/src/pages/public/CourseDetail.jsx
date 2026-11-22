@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, Clock, FileText, Globe, Layers, Lock, PlayCircle, Star, Video, ClipboardCheck, Radio } from 'lucide-react';
+import { BookOpen, Building2, Clock, FileText, Globe, GraduationCap, Layers, Lock, PlayCircle, Star, Video, ClipboardCheck, Radio } from 'lucide-react';
 import { Alert, Button, Card, CardHeader, EmptyState, ErrorAlert, Field, Loading, Select, StatusPill, Textarea, useToast } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { useAction } from '../../lib/hooks';
@@ -42,6 +42,9 @@ export default function CourseDetail() {
           </div>
           <h1 className="mt-3 text-3xl sm:text-4xl">{c.title}</h1>
           <p className="mt-3 max-w-2xl text-base text-muted">{c.summary}</p>
+          <p className="mt-3 flex items-center gap-1.5 text-sm text-navy">
+            {c.provider ? <><Building2 className="h-4 w-4 text-cyan" aria-hidden /> Offered by <span className="font-semibold">{c.provider.name}</span><span className="text-muted"> · taught by engaged verified tutors</span></> : <><GraduationCap className="h-4 w-4 text-cyan" aria-hidden /> Taught by a <Link to="/tutors" className="font-semibold hover:underline">verified tutor</Link></>}
+          </p>
           <ul className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-navy">
             <li className="flex items-center gap-1.5"><Layers className="h-4 w-4 text-cyan" /> {pluralise(c.lessonCount || 0, 'lesson')}</li>
             <li className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-cyan" /> about {hours || '<1'} h</li>
@@ -69,7 +72,7 @@ export default function CourseDetail() {
 }
 
 function Outline({ modules }) {
-  if (!modules.length) return <p className="mt-2 text-sm text-muted">The tutor has not published an outline yet.</p>;
+  if (!modules.length) return <p className="mt-2 text-sm text-muted">No outline has been published yet.</p>;
   return (
     <ol className="mt-4 space-y-3">
       {[...modules].sort((a, b) => a.order - b.order).map((m, i) => (

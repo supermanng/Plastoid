@@ -8,15 +8,17 @@ using Plastoids.Infrastructure.Security;
 using Plastoids.Modules.Catalogue.Contracts;
 using Plastoids.Modules.Lms.Domain;
 using Plastoids.Modules.Lms.Persistence;
+using Plastoids.Modules.Lms.Services;
 using Plastoids.SharedKernel.Cqrs;
 using Plastoids.SharedKernel.Results;
 using Plastoids.SharedKernel.Tenancy;
 
 namespace Plastoids.Modules.Lms.Features.Cohorts.CreateCohort;
 
-public sealed record CreateCohortCommand(Guid CourseId, Guid OfferingId, string Name, DateTime StartsAt, DateTime EndsAt, int Capacity, Guid? ProgrammeId) : ICommand<CreateCohortResponse>;
+/// <summary>TutorUserId (ADR 0019): who teaches the cohort; defaults to the offering's engaged tutor, or the owner on a tutor course.</summary>
+public sealed record CreateCohortCommand(Guid CourseId, Guid OfferingId, string Name, DateTime StartsAt, DateTime EndsAt, int Capacity, Guid? ProgrammeId, Guid? TutorUserId = null) : ICommand<CreateCohortResponse>;
 
-public sealed record CreateCohortResponse(Guid CohortId, Guid CourseId, Guid OfferingId, string Name, DateTime StartsAt, DateTime EndsAt, int Capacity);
+public sealed record CreateCohortResponse(Guid CohortId, Guid CourseId, Guid OfferingId, string Name, DateTime StartsAt, DateTime EndsAt, int Capacity, Guid TutorUserId);
 
 internal sealed class CreateCohortValidator : AbstractValidator<CreateCohortCommand>
 {
@@ -30,20 +32,24 @@ internal sealed class CreateCohortValidator : AbstractValidator<CreateCohortComm
     }
 }
 
-internal sealed class CreateCohortHandler(LmsDbContext db, ICourseOutlineReader courses, ICurrentUser currentUser, ICurrentTenant tenant) : ICommandHandler<CreateCohortCommand, CreateCohortResponse>
+internal sealed class CreateCohortHandler(LmsDbContext db, ICourseOutlineReader courses, TeachingAccess teaching, ICurrentUser currentUser, ICurrentTenant tenant) : ICommandHandler<CreateCohortCommand, CreateCohortResponse>
 {
     public async Task<Result<CreateCohortResponse>> Handle(CreateCohortCommand request, CancellationToken cancellationToken)
     {
+        if (currentUser.UserId is not { } userId)
+        {
+            return Error.Unauthorized("not_signed_in", "Sign in first.");
+        }
+
         var course = await courses.GetPublishedAsync(request.CourseId, null, cancellationToken);
         if (course is null)
         {
             return Error.NotFound("course_not_found", "No published course with that id.");
         }
 
-        var userId = currentUser.UserId ?? Guid.Empty;
-        if (course.OwnerUserId != userId && !currentUser.Roles.Contains("staff"))
+        if (!await teaching.CanManageCourseAsync(course, userId, cancellationToken))
         {
-            return Error.Forbidden("not_course_tutor", "Only the course tutor (or staff) can open cohorts.");
+            return Error.Forbidden("not_course_teacher", "Only the course owner, the organisation's authors, an engaged tutor or staff can open cohorts.");
         }
 
         var offering = course.Offerings.SingleOrDefault(o => o.OfferingId == request.OfferingId);
@@ -52,7 +58,33 @@ internal sealed class CreateCohortHandler(LmsDbContext db, ICourseOutlineReader 
             return Error.Validation("offering_not_cohort", "Cohorts need a cohort-format offering of this course.");
         }
 
-        var created = Cohort.Create(tenant.TenantId, course.CourseId, offering.OfferingId, course.OwnerUserId, request.Name, request.StartsAt, request.EndsAt, request.Capacity, request.ProgrammeId);
+        // ADR 0019 §4: on an organisation course the cohort tutor must hold an active engagement; an engaged tutor may only open cohorts for themselves.
+        Guid tutorUserId;
+        if (course.OrganisationId is null)
+        {
+            tutorUserId = course.OwnerUserId;
+        }
+        else
+        {
+            if ((request.TutorUserId ?? offering.TutorUserId) is not { } chosen)
+            {
+                return Error.Validation("tutor_required", "Name the engaged tutor (tutorUserId) who teaches this cohort.");
+            }
+
+            if (!await teaching.IsEngagedAsync(course, chosen, cancellationToken))
+            {
+                return Error.Validation("tutor_not_engaged", "The tutor has no active engagement on this course.");
+            }
+
+            if (chosen != userId && !await teaching.OwnsCourseAsync(course, userId, cancellationToken))
+            {
+                return Error.Forbidden("not_course_owner", "An engaged tutor can only open cohorts they teach themselves.");
+            }
+
+            tutorUserId = chosen;
+        }
+
+        var created = Cohort.Create(tenant.TenantId, course.CourseId, offering.OfferingId, tutorUserId, request.Name, request.StartsAt, request.EndsAt, request.Capacity, request.ProgrammeId);
         if (created.IsFailure)
         {
             return Result.Failure<CreateCohortResponse>(created.Error);
@@ -60,7 +92,7 @@ internal sealed class CreateCohortHandler(LmsDbContext db, ICourseOutlineReader 
 
         db.Cohorts.Add(created.Value);
         var c = created.Value;
-        return new CreateCohortResponse(c.Id, c.CourseId, c.OfferingId, c.Name, c.StartsAt, c.EndsAt, c.Capacity);
+        return new CreateCohortResponse(c.Id, c.CourseId, c.OfferingId, c.Name, c.StartsAt, c.EndsAt, c.Capacity, c.TutorUserId);
     }
 }
 
@@ -70,7 +102,7 @@ internal static class CreateCohortEndpoint
     {
         group.MapPost("/", async (CreateCohortCommand command, ISender sender, CancellationToken ct) => (await sender.Send(command, ct)).ToCreatedResult(r => $"/api/v1/lms/cohorts/{r.CohortId}"))
             .WithName("CreateCohort")
-            .WithSummary("Tutor: open a dated cohort with capacity on a cohort-format offering.")
-            .RequireAuthorization(Policies.Tutor);
+            .WithSummary("Teacher: open a dated cohort with capacity on a cohort-format offering (organisation courses name the engaged tutor).")
+            .RequireAuthorization(Policies.Mfa); // teaching access (owner, organisation author, engaged tutor, staff) is decided in the handler
     }
 }

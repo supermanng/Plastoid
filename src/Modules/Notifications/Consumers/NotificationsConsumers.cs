@@ -53,10 +53,13 @@ internal sealed class CertificateIssuedConsumer(NotificationDispatcher dispatche
         => dispatcher.DispatchAsync(@event.LearnerId, "certificates.issued", new Dictionary<string, string> { ["certificateId"] = @event.CertificateId.ToString("D"), ["publicCode"] = @event.PublicCode }, "preferred", envelope.Id, cancellationToken);
 }
 
+/// <summary>Tutor payouts only: an organisation payout (ADR 0019) has no single recipient, so TutorUserId is Guid.Empty and nothing is sent.</summary>
 internal sealed class PayoutSettledConsumer(NotificationDispatcher dispatcher) : IIntegrationEventHandler<PayoutSettled>
 {
     public Task HandleAsync(PayoutSettled @event, IntegrationEventEnvelope envelope, CancellationToken cancellationToken)
-        => dispatcher.DispatchAsync(@event.TutorUserId, "payouts.payout.settled", new Dictionary<string, string> { ["payoutId"] = @event.PayoutId.ToString("D"), ["amount"] = @event.Amount.ToString(), ["bankRef"] = @event.BankRef }, "preferred", envelope.Id, cancellationToken);
+        => @event.TutorUserId == Guid.Empty
+            ? Task.CompletedTask
+            : dispatcher.DispatchAsync(@event.TutorUserId, "payouts.payout.settled", new Dictionary<string, string> { ["payoutId"] = @event.PayoutId.ToString("D"), ["amount"] = @event.Amount.ToString(), ["bankRef"] = @event.BankRef }, "preferred", envelope.Id, cancellationToken);
 }
 
 internal sealed class EnrolmentCreatedConsumer(NotificationDispatcher dispatcher) : IIntegrationEventHandler<EnrolmentCreated>

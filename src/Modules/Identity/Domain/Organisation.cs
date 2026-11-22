@@ -9,6 +9,9 @@ public enum OrganisationType
     Institution = 1,
     Employer = 2,
     Hub = 3,
+
+    /// <summary>Teaches (owns courses, engages tutors) without sponsoring seats (ADR 0019).</summary>
+    Provider = 4,
 }
 
 public enum VerificationStatus

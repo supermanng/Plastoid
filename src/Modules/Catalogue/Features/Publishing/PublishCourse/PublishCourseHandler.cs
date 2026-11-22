@@ -21,7 +21,7 @@ internal sealed class PublishCourseHandler(CatalogueDbContext db, CourseAccess a
         }
 
         var course = owned.Value;
-        var verified = await access.OwnerIsVerifiedTutorAsync(course, cancellationToken);
+        var verified = await access.OwnerIsVerifiedAsync(course, cancellationToken);
         var now = clock.UtcNow;
         var published = course.Publish(verified, now);
         if (published.IsFailure)
@@ -36,7 +36,7 @@ internal sealed class PublishCourseHandler(CatalogueDbContext db, CourseAccess a
         db.Versions.Add(CourseVersion.Snapshot(course.TenantId, course.Id, published.Value, OutlineSnapshot.Serialise(outline), lessonCount, minutes, now));
 
         var offeringIds = await db.Offerings.AsNoTracking().Where(o => o.CourseId == course.Id && o.Active).Select(o => o.Id).ToListAsync(cancellationToken);
-        outbox.Enqueue(new CoursePublished(course.Id, course.Id, published.Value, offeringIds, course.OwnerId, course.Slug));
+        outbox.Enqueue(new CoursePublished(course.Id, course.Id, published.Value, offeringIds, course.OwnerId, course.Slug, course.OwnerTypeName, course.OrganisationId));
         return new PublishCourseResponse(course.Id, published.Value, course.Slug, now);
     }
 }

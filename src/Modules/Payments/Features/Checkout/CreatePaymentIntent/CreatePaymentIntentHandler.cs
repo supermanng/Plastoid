@@ -35,6 +35,7 @@ internal sealed class CreatePaymentIntentHandler(
         Guid referenceId;
         Guid? payeeUserId;
         string description;
+        QuotedOffering? quote = null;
         if (request.Purpose == PaymentPurposes.Units)
         {
             return Error.Validation("purpose_invalid", "Buy units through POST /wallet/purchases.");
@@ -42,7 +43,7 @@ internal sealed class CreatePaymentIntentHandler(
 
         if (request.Purpose == PaymentPurposes.Course)
         {
-            var quote = await quotes.GetAsync(request.QuoteId!, cancellationToken);
+            quote = await quotes.GetAsync(request.QuoteId!, cancellationToken);
             if (quote is null || quote.ValidUntil < clock.UtcNow)
             {
                 return Error.Validation("quote_expired", "The price quote has expired; reload the course page.");
@@ -66,8 +67,21 @@ internal sealed class CreatePaymentIntentHandler(
             return Error.Validation("currency_unsupported", "Only NGN is supported at MVP.");
         }
 
-        var fee = fees.Resolve(new SaleContext(request.Purpose, request.LearnerSource ?? LearnerSources.Platform));
-        var intent = PaymentIntent.Create(tenant.TenantId, payerId, request.Purpose, referenceId, request.QuoteId, description, amount, payeeUserId, fee.CommissionBps, fee.RuleCode);
+        PaymentIntent intent;
+        FeeDecision fee;
+        if (quote is { CourseOwnerType: CourseOwnerTypes.Organisation, OrganisationId: { } organisationId })
+        {
+            // ADR 0019: the organisation is the payee; the engaged tutor's share comes out of the net of commission.
+            fee = fees.Resolve(new SaleContext(request.Purpose, request.LearnerSource ?? LearnerSources.Platform, ProviderSale: true));
+            var net = amount - amount.Percent(fee.CommissionBps / 100m, MidpointRounding.ToEven);
+            var tutorShare = quote.TutorUserId is null ? Money.Zero(amount.Currency) : quote.TutorTerms?.TutorShareOf(net) ?? Money.Zero(amount.Currency);
+            intent = PaymentIntent.CreateForOrganisation(tenant.TenantId, payerId, request.Purpose, referenceId, request.QuoteId, description, amount, organisationId, quote.TutorUserId, quote.EngagementId, tutorShare, fee.CommissionBps, fee.RuleCode);
+        }
+        else
+        {
+            fee = fees.Resolve(new SaleContext(request.Purpose, request.LearnerSource ?? LearnerSources.Platform));
+            intent = PaymentIntent.Create(tenant.TenantId, payerId, request.Purpose, referenceId, request.QuoteId, description, amount, payeeUserId, fee.CommissionBps, fee.RuleCode);
+        }
 
         if (request.PayWithUnits)
         {
@@ -78,7 +92,8 @@ internal sealed class CreatePaymentIntentHandler(
                 return Result.Failure<CreatePaymentIntentResponse>(paid.Error);
             }
 
-            return new CreatePaymentIntentResponse(intent.Id, intent.Gateway, intent.GatewayReference, null, amount, fee.CommissionBps, intent.Status.ToString().ToLowerInvariant(), intent.PaymentMethod, intent.UnitsCharged, intent.UnitRateKobo);
+            return new CreatePaymentIntentResponse(intent.Id, intent.Gateway, intent.GatewayReference, null, amount, fee.CommissionBps, intent.Status.ToString().ToLowerInvariant(), intent.PaymentMethod, intent.UnitsCharged, intent.UnitRateKobo,
+                intent.PayeeType, intent.PayeeOrganisationId, intent.TutorShare);
         }
 
         var callback = new Uri($"{options.Value.CallbackBaseUrl.TrimEnd('/')}/{intent.Id:N}");
@@ -91,6 +106,7 @@ internal sealed class CreatePaymentIntentHandler(
 
         intent.AttachCheckout(gateway.Name, session.Value.GatewayReference, session.Value.CheckoutUrl.ToString());
         db.Intents.Add(intent);
-        return new CreatePaymentIntentResponse(intent.Id, gateway.Name, intent.GatewayReference, session.Value.CheckoutUrl, amount, fee.CommissionBps, intent.Status.ToString().ToLowerInvariant());
+        return new CreatePaymentIntentResponse(intent.Id, gateway.Name, intent.GatewayReference, session.Value.CheckoutUrl, amount, fee.CommissionBps, intent.Status.ToString().ToLowerInvariant(),
+            PayeeType: intent.PayeeType, PayeeOrganisationId: intent.PayeeOrganisationId, TutorShare: intent.TutorShare);
     }
 }

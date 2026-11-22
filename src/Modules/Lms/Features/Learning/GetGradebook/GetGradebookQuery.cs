@@ -8,6 +8,7 @@ using Plastoids.Infrastructure.Security;
 using Plastoids.Modules.Catalogue.Contracts;
 using Plastoids.Modules.Lms.Domain;
 using Plastoids.Modules.Lms.Persistence;
+using Plastoids.Modules.Lms.Services;
 using Plastoids.SharedKernel.Cqrs;
 using Plastoids.SharedKernel.Results;
 using Plastoids.SharedKernel.Tenancy;
@@ -23,7 +24,7 @@ public sealed record GradebookRow(Guid EnrolmentId, Guid LearnerId, decimal Prog
 
 public sealed record Gradebook(Guid CourseId, string CourseTitle, IReadOnlyList<GradebookRow> Rows);
 
-internal sealed class GetGradebookHandler(LmsDbContext db, ICourseOutlineReader courses, ICurrentUser currentUser) : IQueryHandler<GetGradebookQuery, Gradebook>
+internal sealed class GetGradebookHandler(LmsDbContext db, ICourseOutlineReader courses, TeachingAccess teaching, ICurrentUser currentUser) : IQueryHandler<GetGradebookQuery, Gradebook>
 {
     public async Task<Result<Gradebook>> Handle(GetGradebookQuery request, CancellationToken cancellationToken)
     {
@@ -44,9 +45,9 @@ internal sealed class GetGradebookHandler(LmsDbContext db, ICourseOutlineReader 
         else if (request.CourseId is { } cid)
         {
             var course = await courses.GetPublishedAsync(cid, null, cancellationToken);
-            if (course is null || (course.OwnerUserId != userId && !currentUser.Roles.Contains("staff")))
+            if (course is null || !await teaching.CanManageCourseAsync(course, userId, cancellationToken))
             {
-                return Error.Forbidden("not_course_tutor", "Only the course tutor (or staff) can see the course gradebook.");
+                return Error.Forbidden("not_course_tutor", "Only the course's teachers (owner, organisation authors, engaged tutors) or staff can see the course gradebook.");
             }
 
             enrolments = await db.Enrolments.AsNoTracking().Where(e => e.CourseId == cid).OrderBy(e => e.StartedAt).Take(500).ToListAsync(cancellationToken);
@@ -92,7 +93,7 @@ internal static class GetGradebookEndpoint
             .RequireAuthorization(Policies.Authenticated);
         lms.MapGet("/courses/{courseId:guid}/gradebook", async (Guid courseId, ISender sender, CancellationToken ct) => (await sender.Send(new GetGradebookQuery(null, courseId), ct)).ToHttpResult())
             .WithName("GetCourseGradebook")
-            .WithSummary("Tutor: every learner's progress and scores for a course.")
-            .RequireAuthorization(Policies.Tutor);
+            .WithSummary("Teacher: every learner's progress and scores for a course.")
+            .RequireAuthorization(Policies.Mfa); // teaching access is decided in the handler (ADR 0019 §4)
     }
 }

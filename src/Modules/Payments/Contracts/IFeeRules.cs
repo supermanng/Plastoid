@@ -12,6 +12,13 @@ public static class PaymentPurposes
     public static bool IsValid(string p) => All.Contains(p, StringComparer.Ordinal);
 }
 
+/// <summary>Who a sale pays (ADR 0019).</summary>
+public static class PayeeTypes
+{
+    public const string Tutor = "tutor";
+    public const string Organisation = "organisation";
+}
+
 public static class LearnerSources
 {
     public const string Platform = "platform";
@@ -19,7 +26,8 @@ public static class LearnerSources
 }
 
 /// <summary>Inputs the fee rules look at (blueprint §18: source of learner, tutor plan, promotion).</summary>
-public sealed record SaleContext(string Purpose, string LearnerSource, string? TutorPlan = null);
+/// <summary>ProviderSale: the course belongs to an organisation (fee code course_provider, ADR 0019).</summary>
+public sealed record SaleContext(string Purpose, string LearnerSource, string? TutorPlan = null, bool ProviderSale = false);
 
 /// <summary>Commission in basis points plus the rule that produced it; stored on the transaction row so later rule changes never alter past earnings.</summary>
 public sealed record FeeDecision(int CommissionBps, string RuleCode);

@@ -96,7 +96,7 @@ export const adminApi = {
   approveBatch: (batchId) => api.post(`/admin/payouts/batches/${batchId}/approve`, {}),
   rejectBatch: (batchId, reason) => api.post(`/admin/payouts/batches/${batchId}/reject`, { reason }),
   submitBatch: (batchId) => api.post(`/admin/payouts/batches/${batchId}/submit`, {}),
-  placeHold: (tutorUserId, reason) => api.post('/admin/payouts/holds', { tutorUserId, reason }),
+  placeHold: (payee, reason) => api.post('/admin/payouts/holds', { payeeType: payee.payeeType || 'tutor', payeeId: payee.payeeId, reason }),
   releaseHold: (holdId, resolution) => api.post(`/admin/payouts/holds/${holdId}/release`, { resolution }),
 
   // Fee rules

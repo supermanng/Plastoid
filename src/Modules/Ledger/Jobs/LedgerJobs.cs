@@ -49,8 +49,8 @@ public sealed class BalanceVerificationJob(LedgerDbContext db, IUnitOfWork unitO
 }
 
 /// <summary>
-/// Daily: client bank balance + gateway in transit ≥ tutor payable + programme funds held + refund credits
-/// (blueprint §18). Shortfall → payouts_frozen + ledger.shortfall-detected.v1.
+/// Daily: client bank balance + gateway in transit ≥ tutor payable + programme funds held + refund credits + unit balances
+/// + provider payable (blueprint §18, ADRs 0018 and 0019). Shortfall → payouts_frozen + ledger.shortfall-detected.v1.
 /// </summary>
 [DisallowConcurrentExecution]
 public sealed class ReconciliationJob(LedgerDbContext db, ILedgerService ledger, IUnitOfWork unitOfWork, IOutbox outbox, IBankStatement bank, IGatewaySettlementReport gateway, IClock clock, ILogger<ReconciliationJob> logger) : IJob
@@ -71,7 +71,8 @@ public sealed class ReconciliationJob(LedgerDbContext db, ILedgerService ledger,
         var liabilities = (await ledger.GetBalanceAsync(AccountCodes.TutorPayable, null, ct)).AmountKobo
             + (await ledger.GetBalanceAsync(AccountCodes.ProgrammeFundsHeld, null, ct)).AmountKobo
             + (await ledger.GetBalanceAsync(AccountCodes.LearnerRefundCredit, null, ct)).AmountKobo
-            + (await ledger.GetBalanceAsync(AccountCodes.UnitBalancesHeld, null, ct)).AmountKobo;
+            + (await ledger.GetBalanceAsync(AccountCodes.UnitBalancesHeld, null, ct)).AmountKobo
+            + (await ledger.GetBalanceAsync(AccountCodes.ProviderPayable, null, ct)).AmountKobo;
         var assets = bankBalance.AmountKobo + inTransit.AmountKobo;
 
         await unitOfWork.BeginAsync(db, ct);

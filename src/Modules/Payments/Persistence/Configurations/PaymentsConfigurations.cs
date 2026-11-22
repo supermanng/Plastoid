@@ -11,6 +11,9 @@ internal sealed class PaymentIntentConfiguration : IEntityTypeConfiguration<Paym
         b.ToTable("payments_intents");
         b.Ignore(x => x.RefundableAmount);
         b.Ignore(x => x.SweepableCommission);
+        b.Ignore(x => x.NetOfCommission);
+        b.Property(x => x.PayeeType).HasMaxLength(16);
+        b.HasIndex(x => x.PayeeOrganisationId);
         b.Property(x => x.Purpose).HasMaxLength(16);
         b.Property(x => x.QuoteId).HasMaxLength(64);
         b.Property(x => x.Description).HasMaxLength(300);
