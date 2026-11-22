@@ -158,3 +158,90 @@ public class PaymentPostingsTests
         FakePaymentGateway.Fee(M.NairaAmount(500_000)).Should().Be(M.NairaAmount(2_000), "capped");
     }
 }
+
+/// <summary>ADR 0018 entries: 11 (units bought), 12 (sale paid with units), 5 back to units and 6 paid with units all balance and hit 2050.</summary>
+public class UnitPostingsTests
+{
+    private static readonly DateTime Now = new(2026, 11, 22, 9, 0, 0, DateTimeKind.Utc);
+    private static readonly Guid Tutor = Guid.CreateVersion7();
+    private static readonly Guid WalletId = Guid.CreateVersion7();
+
+    private static long Dr(JournalEntryDraft d, string code) => d.Postings.Where(p => p.AccountCode == code).Sum(p => p.Debit.AmountKobo);
+    private static long Cr(JournalEntryDraft d, string code) => d.Postings.Where(p => p.AccountCode == code).Sum(p => p.Credit.AmountKobo);
+
+    private static PaymentIntent UnitsSale(long unitsValueKobo)
+    {
+        var intent = PaymentIntent.Create(Tenants.Marketplace, Guid.CreateVersion7(), PaymentPurposes.Course, Guid.CreateVersion7(), "q_1", "Course", M.NairaAmount(45_000), Tutor, 2000, "course_platform");
+        intent.AttachUnits(WalletId, 45, 100_000, unitsValueKobo);
+        return intent;
+    }
+
+    [Fact]
+    public void Entry11_unit_purchase_holds_the_cash_as_a_unit_liability()
+    {
+        var intent = PaymentIntent.Create(Tenants.Marketplace, Guid.CreateVersion7(), PaymentPurposes.Units, WalletId, null, "50 units", M.NairaAmount(50_000), null, 0, "units");
+        intent.AttachCheckout("fake", "fk_units", "https://checkout");
+        intent.Commission.Should().Be(M.Zero());
+        var d = PaymentPostings.Entry11UnitPurchase(intent, Now);
+        LedgerService.Validate(d).IsSuccess.Should().BeTrue();
+        Dr(d, AccountCodes.GatewayReceivable).Should().Be(5_000_000);
+        Cr(d, AccountCodes.UnitBalancesHeld).Should().Be(5_000_000);
+        d.Postings.Single(p => p.AccountCode == AccountCodes.UnitBalancesHeld).OwnerId.Should().Be(WalletId);
+        d.Kind.Should().Be("unit_purchase");
+    }
+
+    [Fact]
+    public void Entry12_redemption_releases_the_units_value_and_splits_the_price_like_a_card_sale()
+    {
+        var d = PaymentPostings.Entry12UnitRedemption(UnitsSale(4_500_000), Now);
+        LedgerService.Validate(d).IsSuccess.Should().BeTrue();
+        Dr(d, AccountCodes.UnitBalancesHeld).Should().Be(4_500_000);
+        Cr(d, AccountCodes.TutorPayable).Should().Be(3_600_000);
+        Cr(d, AccountCodes.CourseCommission).Should().Be(900_000);
+        d.Postings.Should().NotContain(p => p.AccountCode == AccountCodes.UnitRevaluation);
+    }
+
+    [Fact]
+    public void Entry12_books_a_revaluation_gain_when_units_were_bought_dearer()
+    {
+        var d = PaymentPostings.Entry12UnitRedemption(UnitsSale(4_600_000), Now);
+        LedgerService.Validate(d).IsSuccess.Should().BeTrue();
+        Dr(d, AccountCodes.UnitBalancesHeld).Should().Be(4_600_000);
+        Cr(d, AccountCodes.UnitRevaluation).Should().Be(100_000);
+    }
+
+    [Fact]
+    public void Entry12_books_a_revaluation_cost_when_units_were_bought_cheaper()
+    {
+        var d = PaymentPostings.Entry12UnitRedemption(UnitsSale(4_400_000), Now);
+        LedgerService.Validate(d).IsSuccess.Should().BeTrue();
+        Dr(d, AccountCodes.UnitRevaluation).Should().Be(100_000);
+    }
+
+    [Fact]
+    public void Entry5_refund_of_a_units_sale_restores_the_unit_liability()
+    {
+        var intent = UnitsSale(4_500_000);
+        var refund = Refund.Request(Tenants.Marketplace, intent.Id, M.NairaAmount(9_000), "changed mind", Guid.CreateVersion7());
+        refund.RedirectToUnits();
+        var d = PaymentPostings.Entry5Refund(intent, refund, Now);
+        LedgerService.Validate(d).IsSuccess.Should().BeTrue();
+        Cr(d, AccountCodes.UnitBalancesHeld).Should().Be(900_000);
+        Dr(d, AccountCodes.TutorPayable).Should().Be(720_000);
+        Dr(d, AccountCodes.CourseCommission).Should().Be(180_000);
+        intent.UnitsToRefund(M.NairaAmount(9_000)).Should().Be(9);
+    }
+
+    [Fact]
+    public void Entry6_invoice_paid_with_units_funds_the_programme_and_the_vat()
+    {
+        var subtotal = M.NairaAmount(1_000_000);
+        var vat = M.NairaAmount(75_000);
+        var invoice = Invoice.Issue(Tenants.Marketplace, Guid.CreateVersion7(), Guid.CreateVersion7(), "INV-1", subtotal, vat, Now, 14, Guid.CreateVersion7());
+        var d = PaymentPostings.Entry6InvoicePaidFromUnits(invoice, invoice.Total, M.NairaAmount(1_075_000), WalletId, Now);
+        LedgerService.Validate(d).IsSuccess.Should().BeTrue();
+        Dr(d, AccountCodes.UnitBalancesHeld).Should().Be(107_500_000);
+        Cr(d, AccountCodes.ProgrammeFundsHeld).Should().Be(100_000_000);
+        Cr(d, AccountCodes.VatPayable).Should().Be(7_500_000);
+    }
+}

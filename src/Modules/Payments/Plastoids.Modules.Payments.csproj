@@ -8,6 +8,7 @@
     <ProjectReference Include="../Ledger/Plastoids.Modules.Ledger.csproj" />
     <ProjectReference Include="../Catalogue/Plastoids.Modules.Catalogue.csproj" />
     <ProjectReference Include="../Identity/Plastoids.Modules.Identity.csproj" />
+    <ProjectReference Include="../Wallet/Contracts/Plastoids.Modules.Wallet.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />

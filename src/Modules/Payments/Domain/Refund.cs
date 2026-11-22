@@ -44,6 +44,9 @@ public sealed class Refund : Entity
     /// <summary>"card" (gateway) or "credit" (learner refund credit, ledger 2030).</summary>
     public string Destination { get; private set; } = "card";
 
+    /// <summary>A payment made with units is only ever refunded as units (ADR 0018).</summary>
+    public void RedirectToUnits() => Destination = "units";
+
     public bool PolicyDriven { get; private set; }
 
     public Guid? LearnerId { get; private set; }

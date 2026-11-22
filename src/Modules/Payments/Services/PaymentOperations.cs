@@ -19,6 +19,7 @@ internal sealed class PaymentOperations(
     IPaymentGateway gateway,
     IFeeRules fees,
     RefundIssuer issuer,
+    UnitCheckout units,
     ILedgerService ledger,
     IOptions<PaymentOptions> options,
     ICurrentTenant tenant) : IPaymentOperations
@@ -38,6 +39,18 @@ internal sealed class PaymentOperations(
         await EnlistAsync(cancellationToken);
         var fee = fees.Resolve(new SaleContext(request.Purpose, request.LearnerSource));
         var intent = PaymentIntent.Create(tenant.TenantId, request.PayerId, request.Purpose, request.ReferenceId, null, request.Description, request.Amount, request.PayeeUserId, fee.CommissionBps, fee.RuleCode);
+        if (request.PayWithUnits)
+        {
+            db.Intents.Add(intent);
+            var paid = await units.PayAsync(intent, cancellationToken);
+            if (paid.IsFailure)
+            {
+                return Result.Failure<IntentHandle>(paid.Error);
+            }
+
+            return new IntentHandle(intent.Id, intent.GatewayReference, null, intent.Amount, fee.CommissionBps, intent.Status.ToString().ToLowerInvariant(), intent.UnitsCharged);
+        }
+
         var callback = new Uri($"{options.Value.CallbackBaseUrl.TrimEnd('/')}/{intent.Id:N}");
         var session = await gateway.InitialiseCheckoutAsync(intent.Id, request.Amount, $"{request.PayerId:N}@{options.Value.PayerEmailFallbackDomain}", callback, cancellationToken);
         if (session.IsFailure)

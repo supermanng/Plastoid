@@ -13,6 +13,9 @@ public static class AccountCodes
     public const string ProgrammeFundsHeld = "2020";
     public const string LearnerRefundCredit = "2030";
     public const string VatPayable = "2040";
+
+    /// <summary>Cash held against unsold units in wallets (ADR 0018); sub-ledger per wallet.</summary>
+    public const string UnitBalancesHeld = "2050";
     public const string CourseCommission = "4010";
     public const string TutoringCommission = "4020";
     public const string ProgrammeManagementFee = "4030";
@@ -20,7 +23,10 @@ public static class AccountCodes
     public const string Subscriptions = "4050";
     public const string ProcessingFees = "5010";
 
-    public static readonly IReadOnlyList<string> All = [BankOperating, BankClientFunds, GatewayReceivable, TutorPayable, ProgrammeFundsHeld, LearnerRefundCredit, VatPayable, CourseCommission, TutoringCommission, ProgrammeManagementFee, PlatformSeatFee, Subscriptions, ProcessingFees];
+    /// <summary>Gap between the naira released from unit balances and the price applied (rate changes, whole-unit rounding). Revenue account; a shortfall is debited.</summary>
+    public const string UnitRevaluation = "4060";
+
+    public static readonly IReadOnlyList<string> All = [BankOperating, BankClientFunds, GatewayReceivable, TutorPayable, ProgrammeFundsHeld, LearnerRefundCredit, VatPayable, UnitBalancesHeld, CourseCommission, TutoringCommission, ProgrammeManagementFee, PlatformSeatFee, Subscriptions, UnitRevaluation, ProcessingFees];
 }
 
 /// <summary>Sub-ledger owners: 2010 per tutor, 2020 per programme, 2030 per learner.</summary>
@@ -29,6 +35,7 @@ public static class SubLedgerOwnerTypes
     public const string Tutor = "tutor";
     public const string Programme = "programme";
     public const string Learner = "learner";
+    public const string Wallet = "wallet";
 }
 
 /// <summary>One side of a posting. Exactly one of Debit/Credit is non-zero.</summary>

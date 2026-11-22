@@ -19,11 +19,11 @@ using Plastoids.SharedKernel.Time;
 namespace Plastoids.Modules.Applications.Features.Applying.AcceptOffer;
 
 /// <summary>Accept within 5 days. Partial sponsorship adds a co-pay checkout (Payments.Contracts); an offer on an overlapping programme must be given up first.</summary>
-public sealed record AcceptOfferCommand(Guid ApplicationId, Guid? WithdrawFromApplicationId, string IdempotencyKey) : ICommand<AcceptOfferResponse>, IIdempotentCommand;
+public sealed record AcceptOfferCommand(Guid ApplicationId, Guid? WithdrawFromApplicationId, bool PayWithUnits, string IdempotencyKey) : ICommand<AcceptOfferResponse>, IIdempotentCommand;
 
-public sealed record AcceptOfferRequest(Guid? WithdrawFromApplicationId);
+public sealed record AcceptOfferRequest(Guid? WithdrawFromApplicationId, bool PayWithUnits = false);
 
-public sealed record CoPayCheckout(Guid PaymentIntentId, string GatewayReference, Uri CheckoutUrl, Money Amount, DateTime SeatHeldUntil);
+public sealed record CoPayCheckout(Guid PaymentIntentId, string GatewayReference, Uri? CheckoutUrl, Money Amount, DateTime SeatHeldUntil);
 
 public sealed record AcceptOfferResponse(Guid ApplicationId, string Status, Guid SeatId, CoPayCheckout? CoPay);
 
@@ -106,7 +106,7 @@ internal sealed class AcceptOfferHandler(ApplicationsDbContext db, ApplicationAc
         var now = clock.UtcNow;
         if (programme.CoPayPerSeat.AmountKobo > 0)
         {
-            var intent = await payments.CreateIntentAsync(new IntentRequest(application.LearnerId, PaymentPurposes.CoPay, programme.ProgrammeId, programme.CoPayPerSeat, null, $"Co-pay: {programme.Name}"), cancellationToken);
+            var intent = await payments.CreateIntentAsync(new IntentRequest(application.LearnerId, PaymentPurposes.CoPay, programme.ProgrammeId, programme.CoPayPerSeat, null, $"Co-pay: {programme.Name}", PayWithUnits: request.PayWithUnits), cancellationToken);
             if (intent.IsFailure)
             {
                 return Result.Failure<AcceptOfferResponse>(intent.Error);
@@ -167,7 +167,7 @@ internal static class AcceptOfferEndpoints
         group.MapPost("/{applicationId:guid}/offer/accept", async (Guid applicationId, AcceptOfferRequest? body, HttpContext http, ISender sender, CancellationToken ct) =>
             {
                 var key = http.Request.Headers["Idempotency-Key"].FirstOrDefault() ?? string.Empty;
-                return (await sender.Send(new AcceptOfferCommand(applicationId, body?.WithdrawFromApplicationId, key), ct)).ToHttpResult();
+                return (await sender.Send(new AcceptOfferCommand(applicationId, body?.WithdrawFromApplicationId, body?.PayWithUnits ?? false, key), ct)).ToHttpResult();
             })
             .WithName("AcceptOffer")
             .WithSummary("Learner: accept the offer (5-day expiry). Partial sponsorship returns a co-pay checkout; the seat is held 7 days. Requires Idempotency-Key.")

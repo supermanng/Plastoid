@@ -11,6 +11,7 @@ import { useOrganisation } from './useOrganisation';
 import { NoOrganisation, RoleHint } from './OrganisationSwitcher';
 import { QuoteLines, quoteViewLines } from './QuotePanel';
 import { statusLabel } from './ProgrammeCard';
+import { PayFromWallet } from './PayFromWallet';
 
 const TABS = [
   { value: 'overview', label: 'Overview' },
@@ -145,11 +146,13 @@ function Overview({ p, org }) {
             <div className="mt-4 space-y-2">
               <Button icon={Rocket} className="w-full" disabled={!ready || !org.isOwner} onClick={() => setConfirm(true)}>Publish opportunity</Button>
               <RoleHint org={org} />
-              {!p.isFunded && !p.paymentPlanApproved && p.invoiceId ? <Button variant="secondary" size="sm" className="w-full" icon={Receipt} to={`/sponsor/invoices/${p.invoiceId}`}>Pay the invoice</Button> : null}
+              {!p.isFunded && !p.paymentPlanApproved && p.invoiceId ? <Button variant="secondary" size="sm" className="w-full" icon={Receipt} to={`/sponsor/invoices/${p.invoiceId}`}>Pay the invoice by transfer</Button> : null}
               {p.reviewStatus === 'changesRequested' ? <Alert tone="warn">Plastoids asked for changes to the campaign; edit and request a new quote.</Alert> : null}
             </div>
           )}
         </Card>
+
+        {!p.isFunded && !p.paymentPlanApproved && p.invoiceId && p.status !== 'closed' ? <PayFromWallet org={org} programmeId={p.programmeId} invoiceId={p.invoiceId} outstanding={p.quote?.total} compact /> : null}
 
         {quoteLines ? (
           <Card>

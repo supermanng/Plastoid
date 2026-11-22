@@ -47,8 +47,9 @@ export function postReview(courseId, body) {
  * POST /payments/intents { purpose: 'course', quoteId } → { paymentIntentId, gateway, gatewayReference, checkoutUrl, amount, commissionBps, status }
  * purpose=booking|co_pay take { amount, referenceId, payeeUserId }.
  */
-export function createCourseCheckout(quoteId, learnerSource) {
-  return api.post('/payments/intents', { purpose: 'course', quoteId, learnerSource: learnerSource ?? null });
+/** payWithUnits=true settles from the signed-in user's unit wallet at once (status "succeeded", checkoutUrl null, unitsCharged). */
+export function createCourseCheckout(quoteId, learnerSource, payWithUnits = false) {
+  return api.post('/payments/intents', { purpose: 'course', quoteId, learnerSource: learnerSource ?? null, payWithUnits: Boolean(payWithUnits) });
 }
 
 /* ---- Sponsorship -------------------------------------------------------- */

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The Contracts folder builds as its own assembly so Payments and Sponsorship can reference it without a cycle. -->
+    <Compile Remove="Contracts/**" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Plastoids.SharedKernel/Plastoids.SharedKernel.csproj" />
+    <ProjectReference Include="../../Plastoids.Infrastructure/Plastoids.Infrastructure.csproj" />
+    <ProjectReference Include="Contracts/Plastoids.Modules.Wallet.Contracts.csproj" />
+    <ProjectReference Include="../Identity/Plastoids.Modules.Identity.csproj" />
+    <ProjectReference Include="../Payments/Plastoids.Modules.Payments.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Plastoids.Modules.Wallet.Tests" />
+    <InternalsVisibleTo Include="Plastoids.IntegrationTests" />
+  </ItemGroup>
+</Project>

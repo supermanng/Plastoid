@@ -70,7 +70,8 @@ public sealed class ReconciliationJob(LedgerDbContext db, ILedgerService ledger,
 
         var liabilities = (await ledger.GetBalanceAsync(AccountCodes.TutorPayable, null, ct)).AmountKobo
             + (await ledger.GetBalanceAsync(AccountCodes.ProgrammeFundsHeld, null, ct)).AmountKobo
-            + (await ledger.GetBalanceAsync(AccountCodes.LearnerRefundCredit, null, ct)).AmountKobo;
+            + (await ledger.GetBalanceAsync(AccountCodes.LearnerRefundCredit, null, ct)).AmountKobo
+            + (await ledger.GetBalanceAsync(AccountCodes.UnitBalancesHeld, null, ct)).AmountKobo;
         var assets = bankBalance.AmountKobo + inTransit.AmountKobo;
 
         await unitOfWork.BeginAsync(db, ct);

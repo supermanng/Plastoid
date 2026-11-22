@@ -5,6 +5,7 @@ import { Check, Clock, CreditCard, FileQuestion, Scale } from 'lucide-react';
 import { Alert, Breadcrumb, Button, Card, CardHeader, ConfirmDialog, ErrorAlert, KeyValue, Loading, StatusPill } from '../../components/ui';
 import { useAction } from '../../lib/hooks';
 import { formatDate, formatDateTime, formatMoney, koboOf, relativeTime, titleCase } from '../../lib/format';
+import { UnitPrice } from '../../lib/units.jsx';
 import { applications, goToCheckout, isDevCheckout, keys } from '../../api/learn';
 import { applicationLabel } from './Dashboard';
 import { APPEAL_DAYS, useProgrammeNames } from './Applications';
@@ -91,7 +92,7 @@ export default function ApplicationDetail() {
               <CardHeader title="Co-payment due" description={coPay ? `Seat held until ${formatDateTime(coPay.seatHeldUntil)}.` : 'Your seat is held for 7 days while you pay the balance.'} />
               {coPay ? (
                 <>
-                  <KeyValue items={[['Amount', formatMoney(coPay.amount)], ['Reference', coPay.gatewayReference]]} />
+                  <KeyValue items={[['Amount', <UnitPrice money={coPay.amount} size="sm" inline />], ['Reference', coPay.gatewayReference]]} />
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Button icon={CreditCard} href={String(coPay.checkoutUrl)}>Pay now</Button>
                     <Button variant="secondary" to={`/learn/payments/${coPay.paymentIntentId}`}>Payment details</Button>
@@ -143,7 +144,7 @@ export default function ApplicationDetail() {
                 ['Submitted', app.submittedAt ? formatDateTime(app.submittedAt) : 'Not yet'],
                 app.assessmentScore != null ? ['Entry assessment', `${Number(app.assessmentScore).toFixed(0)}% ${app.assessmentPassed ? '(passed)' : '(not passed)'}`] : null,
                 app.totalScore != null ? ['Total score', Number(app.totalScore).toFixed(1)] : null,
-                coPayDue ? ['Co-payment', formatMoney(app.coPayAmount)] : ['Co-payment', 'None (fully sponsored)'],
+                coPayDue ? ['Co-payment', <UnitPrice money={app.coPayAmount} size="sm" inline />] : ['Co-payment', 'None (fully sponsored)'],
                 app.offerExpiresAt ? ['Offer expires', formatDateTime(app.offerExpiresAt)] : null,
                 app.seatId ? ['Seat', app.seatId.slice(0, 8)] : null,
                 ['Application ID', <code className="text-xs">{app.applicationId}</code>],

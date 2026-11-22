@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Contracts-only assembly: Payments, Sponsorship and Catalogue price in units while Wallet consumes Payments' events (see docs/adr/0018). -->
+  <ItemGroup>
+    <ProjectReference Include="../../../Plastoids.SharedKernel/Plastoids.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

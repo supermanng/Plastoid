@@ -49,6 +49,7 @@ public sealed class PaymentsModule : IModule
         services.AddScoped<IPaymentsAdminQueues, PaymentsAdminQueues>();
         services.AddScoped<PaymentProcessing>();
         services.AddScoped<RefundIssuer>();
+        services.AddScoped<UnitCheckout>();
         services.AddScoped<IPaymentOperations, PaymentOperations>();
         services.AddScoped<InvoiceIssuer>();
         services.AddScoped<ISponsorInvoicing, SponsorInvoicing>();

@@ -5,7 +5,10 @@ public static class PaymentPurposes
     public const string Course = "course";
     public const string Booking = "booking";
     public const string CoPay = "co_pay";
-    public static readonly IReadOnlyCollection<string> All = [Course, Booking, CoPay];
+
+    /// <summary>Buying units for a wallet (ADR 0018): no commission, no payee; the cash becomes a unit liability.</summary>
+    public const string Units = "units";
+    public static readonly IReadOnlyCollection<string> All = [Course, Booking, CoPay, Units];
     public static bool IsValid(string p) => All.Contains(p, StringComparer.Ordinal);
 }
 

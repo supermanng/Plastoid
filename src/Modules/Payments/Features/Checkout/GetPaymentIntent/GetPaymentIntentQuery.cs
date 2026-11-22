@@ -14,7 +14,7 @@ namespace Plastoids.Modules.Payments.Features.Checkout.GetPaymentIntent;
 
 public sealed record GetPaymentIntentQuery(Guid PaymentIntentId) : IQuery<PaymentIntentView>;
 
-public sealed record PaymentIntentView(Guid PaymentIntentId, string Purpose, Guid ReferenceId, string Description, Money Amount, string Status, string Gateway, string GatewayReference, Uri CheckoutUrl, DateTime CreatedAt, DateTime? SucceededAt, string? FailureReason, Money RefundedAmount);
+public sealed record PaymentIntentView(Guid PaymentIntentId, string Purpose, Guid ReferenceId, string Description, Money Amount, string Status, string Gateway, string GatewayReference, Uri? CheckoutUrl, DateTime CreatedAt, DateTime? SucceededAt, string? FailureReason, Money RefundedAmount, string PaymentMethod = "gateway", long UnitsCharged = 0, long UnitRateKobo = 0);
 
 internal sealed class GetPaymentIntentHandler(PaymentsDbContext db, ICurrentUser currentUser) : IQueryHandler<GetPaymentIntentQuery, PaymentIntentView>
 {
@@ -26,7 +26,7 @@ internal sealed class GetPaymentIntentHandler(PaymentsDbContext db, ICurrentUser
             return Error.NotFound("payment_not_found", "No such payment.");
         }
 
-        return new PaymentIntentView(i.Id, i.Purpose, i.ReferenceId, i.Description, i.Amount, i.Status.ToString().ToLowerInvariant(), i.Gateway, i.GatewayReference, new Uri(i.CheckoutUrl), i.CreatedAt, i.SucceededAt, i.FailureReason, i.RefundedAmount);
+        return new PaymentIntentView(i.Id, i.Purpose, i.ReferenceId, i.Description, i.Amount, i.Status.ToString().ToLowerInvariant(), i.Gateway, i.GatewayReference, string.IsNullOrEmpty(i.CheckoutUrl) ? null : new Uri(i.CheckoutUrl), i.CreatedAt, i.SucceededAt, i.FailureReason, i.RefundedAmount, i.PaymentMethod, i.UnitsCharged, i.UnitRateKobo);
     }
 }
 

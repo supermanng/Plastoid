@@ -23,7 +23,7 @@ internal sealed class PaymentProcessing(PaymentsDbContext db, ILedgerService led
             return false;
         }
 
-        var entry = await ledger.PostAsync(PaymentPostings.Entry1Charge(intent, paidAt), ct);
+        var entry = await ledger.PostAsync(intent.Purpose == PaymentPurposes.Units ? PaymentPostings.Entry11UnitPurchase(intent, paidAt) : PaymentPostings.Entry1Charge(intent, paidAt), ct);
         if (entry.IsFailure)
         {
             return Result.Failure<bool>(entry.Error);
@@ -31,6 +31,26 @@ internal sealed class PaymentProcessing(PaymentsDbContext db, ILedgerService led
 
         intent.MarkSucceeded(gatewayFee, paidAt, entry.Value);
         db.Transactions.Add(PaymentTransaction.Record(intent.TenantId, intent.Id, TransactionKinds.Charge, intent.Amount, gatewayFee, intent.GatewayReference, paidAt, entry.Value));
+        outbox.Enqueue(new PaymentSucceeded(intent.Id, intent.Id, intent.PayerId, intent.Purpose, intent.ReferenceId, intent.Amount, intent.PayeeUserId, intent.PayeeNet));
+        return true;
+    }
+
+    /// <summary>A sale settled from the payer's unit wallet (ADR 0018): entry 12 instead of entry 1, no gateway, succeeded at once. Same event as a card payment, so enrolment, booking and earnings follow unchanged.</summary>
+    public async Task<Result<bool>> ConfirmFromUnitsAsync(PaymentIntent intent, DateTime paidAt, CancellationToken ct)
+    {
+        if (intent.Status == PaymentStatus.Succeeded)
+        {
+            return false;
+        }
+
+        var entry = await ledger.PostAsync(PaymentPostings.Entry12UnitRedemption(intent, paidAt), ct);
+        if (entry.IsFailure)
+        {
+            return Result.Failure<bool>(entry.Error);
+        }
+
+        intent.MarkSucceeded(Money.Zero(intent.Amount.Currency), paidAt, entry.Value);
+        db.Transactions.Add(PaymentTransaction.Record(intent.TenantId, intent.Id, TransactionKinds.Charge, intent.Amount, Money.Zero(intent.Amount.Currency), intent.GatewayReference, paidAt, entry.Value));
         outbox.Enqueue(new PaymentSucceeded(intent.Id, intent.Id, intent.PayerId, intent.Purpose, intent.ReferenceId, intent.Amount, intent.PayeeUserId, intent.PayeeNet));
         return true;
     }

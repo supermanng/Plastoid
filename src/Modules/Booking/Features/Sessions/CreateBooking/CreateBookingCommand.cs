@@ -19,10 +19,10 @@ using Plastoids.SharedKernel.Time;
 namespace Plastoids.Modules.Booking.Features.Sessions.CreateBooking;
 
 /// <summary>Creates the booking and its payment intent (or consumes a package session). Money write → Idempotency-Key.</summary>
-public sealed record CreateBookingCommand(Guid TutorId, DateTime SlotStart, int DurationMinutes, string Format, Guid? PackageId, string? Note, string? LearnerSource, string IdempotencyKey)
+public sealed record CreateBookingCommand(Guid TutorId, DateTime SlotStart, int DurationMinutes, string Format, Guid? PackageId, string? Note, string? LearnerSource, bool PayWithUnits, string IdempotencyKey)
     : ICommand<CreateBookingResponse>, IIdempotentCommand;
 
-public sealed record CreateBookingRequest(Guid TutorId, DateTime SlotStart, int DurationMinutes, string Format, Guid? PackageId, string? Note, string? LearnerSource);
+public sealed record CreateBookingRequest(Guid TutorId, DateTime SlotStart, int DurationMinutes, string Format, Guid? PackageId, string? Note, string? LearnerSource, bool PayWithUnits = false);
 
 public sealed record CreateBookingResponse(Guid BookingId, string Status, Money Price, Guid? PaymentIntentId, Uri? CheckoutUrl, DateTime SlotStart, DateTime SlotEnd);
 
@@ -99,7 +99,7 @@ internal sealed class CreateBookingHandler(BookingDbContext db, BookingPricing p
             return new CreateBookingResponse(booking.Id, booking.Status.ToString().ToLowerInvariant(), price, booking.PaymentIntentId, null, booking.SlotStart, booking.SlotEnd);
         }
 
-        var intent = await payments.CreateIntentAsync(new IntentRequest(learnerId, PaymentPurposes.Booking, booking.Id, price, q.TutorUserId, $"{request.DurationMinutes}-minute {request.Format} session", request.LearnerSource ?? LearnerSources.Platform), cancellationToken);
+        var intent = await payments.CreateIntentAsync(new IntentRequest(learnerId, PaymentPurposes.Booking, booking.Id, price, q.TutorUserId, $"{request.DurationMinutes}-minute {request.Format} session", request.LearnerSource ?? LearnerSources.Platform, request.PayWithUnits), cancellationToken);
         if (intent.IsFailure)
         {
             return Result.Failure<CreateBookingResponse>(intent.Error);
@@ -117,7 +117,7 @@ internal static class CreateBookingEndpoint
         group.MapPost("/", async (CreateBookingRequest body, HttpContext http, ISender sender, CancellationToken ct) =>
             {
                 var key = http.Request.Headers["Idempotency-Key"].FirstOrDefault() ?? string.Empty;
-                return (await sender.Send(new CreateBookingCommand(body.TutorId, body.SlotStart, body.DurationMinutes, body.Format, body.PackageId, body.Note, body.LearnerSource, key), ct))
+                return (await sender.Send(new CreateBookingCommand(body.TutorId, body.SlotStart, body.DurationMinutes, body.Format, body.PackageId, body.Note, body.LearnerSource, body.PayWithUnits, key), ct))
                     .ToCreatedResult(r => $"/api/v1/bookings/{r.BookingId}");
             })
             .WithName("CreateBooking")

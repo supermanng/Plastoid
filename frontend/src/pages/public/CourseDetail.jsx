@@ -7,6 +7,8 @@ import { useAuth } from '../../lib/auth';
 import { useAction } from '../../lib/hooks';
 import { api } from '../../lib/api';
 import { formatDate, formatDateTime, formatMoney, pluralise, titleCase } from '../../lib/format';
+import { UnitPrice, formatUnits, unitsFor, useUnitRate } from '../../lib/units.jsx';
+import { walletApi, walletKeys } from '../../api/wallet';
 import { createCourseCheckout, getCourse, goToCheckout, postReview, queryKeys } from '../../api/public';
 
 const LESSON_ICON = { video: Video, doc: FileText, document: FileText, assignment: ClipboardCheck, live: Radio, quiz: ClipboardCheck };
@@ -101,20 +103,29 @@ function OfferingsPanel({ course, className }) {
   const toast = useToast();
   const [result, setResult] = useState(null);
   const offerings = course.offerings || [];
+  const rate = useUnitRate();
+  const wallet = useQuery({ queryKey: walletKeys.me, queryFn: () => walletApi.me(), enabled: auth.isAuthenticated, staleTime: 15_000 });
+  const balance = wallet.data?.balance ?? null;
 
-  const checkout = useAction((quoteId) => createCourseCheckout(quoteId), {
+  const checkout = useAction(({ quoteId, payWithUnits }) => createCourseCheckout(quoteId, undefined, payWithUnits), {
     silent: true,
-    onSuccess: (res) => {
+    invalidate: [walletKeys.me],
+    onSuccess: (res, vars) => {
+      if (vars.payWithUnits) {
+        toast.success(`Enrolled: ${formatUnits(res.unitsCharged)} spent`, 'Your course is ready in My courses.');
+        navigate('/learn/courses');
+        return;
+      }
       setResult(res);
       if (!goToCheckout(res.checkoutUrl)) toast.info('Checkout created', 'The payment gateway is simulated in this environment; open the payment to continue.');
     },
-    onError: (err) => toast.error(err, 'Could not start checkout'),
+    onError: (err) => toast.error(err, err?.code === 'insufficient_units' ? 'Not enough units' : 'Could not start checkout'),
   });
 
-  function enrol(o) {
+  function enrol(o, payWithUnits = false) {
     if (!auth.isAuthenticated) return navigate('/auth/sign-in', { state: { from: location.pathname } });
     if (new Date(o.priceValidUntil) < new Date()) return toast.error('This price quote has expired; reload the page for a fresh one.', 'Price changed');
-    return checkout.mutate(o.quoteId);
+    return checkout.mutate({ quoteId: o.quoteId, payWithUnits });
   }
 
   return (
@@ -136,12 +147,27 @@ function OfferingsPanel({ course, className }) {
                     {o.capacity !== null && o.capacity !== undefined ? ` · ${o.capacity} seats` : ''}
                   </div>
                 </div>
-                <div className="text-right"><div className="text-lg font-extrabold text-navy tabular">{formatMoney(o.price)}</div></div>
+                <div className="text-right"><UnitPrice money={o.price} size="lg" className="items-end" /></div>
               </div>
               {(o.fundingTypes || []).some((f) => /sponsor/i.test(f)) ? <div className="mt-2"><StatusPill tone="success" status="sponsored" label="Sponsored seats accepted" /></div> : null}
               <div className="mt-3 flex flex-col gap-2">
                 {full ? <Alert tone="warn">Seats are full. Sponsored opportunities for this course may still be open.</Alert> : null}
-                {!sponsoredOnly ? <Button className="w-full" loading={checkout.isPending && checkout.variables === o.quoteId} disabled={full} onClick={() => enrol(o)}>{auth.isAuthenticated ? `Pay ${formatMoney(o.price)}` : 'Sign in to enrol'}</Button> : null}
+                {!sponsoredOnly ? (
+                  auth.isAuthenticated ? (
+                    <PayButtons
+                      offering={o}
+                      full={full}
+                      units={unitsFor(o.price, rate.data?.rateKobo)}
+                      balance={balance}
+                      busy={checkout.isPending && checkout.variables?.quoteId === o.quoteId}
+                      busyWithUnits={checkout.isPending && checkout.variables?.quoteId === o.quoteId && checkout.variables?.payWithUnits}
+                      onUnits={() => enrol(o, true)}
+                      onCard={() => enrol(o, false)}
+                    />
+                  ) : (
+                    <Button className="w-full" disabled={full} onClick={() => enrol(o)}>Sign in to enrol</Button>
+                  )
+                ) : null}
                 <Button to={`/opportunities`} variant={sponsoredOnly ? 'primary' : 'ghost'} className="w-full" size="sm">Find a sponsored seat</Button>
               </div>
               <div className="mt-2 text-[11px] text-muted">Quote valid until {formatDateTime(o.priceValidUntil)}</div>
@@ -156,6 +182,27 @@ function OfferingsPanel({ course, className }) {
         </Alert>
       ) : null}
     </Card>
+  );
+}
+
+/** Primary: pay with units (disabled with a hint when short); secondary: hosted card checkout. */
+function PayButtons({ offering, full, units, balance, busy, busyWithUnits, onUnits, onCard }) {
+  const short = units !== null && balance !== null && balance < units;
+  const unknown = units === null || balance === null;
+  return (
+    <>
+      <Button className="w-full" loading={busyWithUnits} disabled={full || short || unknown || busy} onClick={onUnits} title={short ? `You have ${formatUnits(balance)}; this needs ${formatUnits(units)}.` : undefined}>
+        {units === null ? 'Pay with units' : `Pay ${formatUnits(units)}`}
+      </Button>
+      {short ? (
+        <p className="text-xs text-muted">
+          You have {formatUnits(balance)}; this course needs {formatUnits(units)}. <Link to="/learn/wallet" className="font-semibold text-royal">Buy {formatUnits(units - balance)}</Link>
+        </p>
+      ) : balance !== null && units !== null ? (
+        <p className="text-xs text-muted">Wallet balance {formatUnits(balance)}; {formatUnits(balance - units)} left after this. <Link to="/learn/wallet" className="font-semibold text-royal">Wallet</Link></p>
+      ) : null}
+      <Button variant="secondary" className="w-full" loading={busy && !busyWithUnits} disabled={full || busy} onClick={onCard}>Pay {formatMoney(offering.price)} by card</Button>
+    </>
   );
 }
 

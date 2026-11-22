@@ -14,6 +14,7 @@ using Plastoids.Modules.Payments.Contracts;
 using Plastoids.Modules.Sponsorship.Consumers;
 using Plastoids.Modules.Sponsorship.Contracts;
 using Plastoids.Modules.Sponsorship.Features.Campaigns.ApproveQuote;
+using Plastoids.Modules.Sponsorship.Features.Campaigns.FundFromWallet;
 using Plastoids.Modules.Sponsorship.Features.Campaigns.CloseProgramme;
 using Plastoids.Modules.Sponsorship.Features.Campaigns.CreateCampaign;
 using Plastoids.Modules.Sponsorship.Features.Campaigns.DownloadImpactReport;
@@ -70,6 +71,7 @@ public sealed class SponsorshipModule : IModule
         CreateCampaignEndpoint.Map(sponsor);
         RequestQuoteEndpoint.Map(sponsor);
         ApproveQuoteEndpoint.Map(sponsor);
+        FundFromWalletEndpoint.Map(sponsor);
         GetProgrammeFunnelEndpoint.Map(sponsor);
         GetProgrammeBudgetEndpoint.Map(sponsor);
         DownloadImpactReportEndpoint.Map(sponsor);

@@ -6,6 +6,7 @@ import { useForm } from '../../lib/hooks';
 import { sponsorApi } from '../../api/sponsor';
 import { useOrganisation } from './useOrganisation';
 import { NoOrganisation, OrganisationSwitcher, RoleHint, VerificationBanner } from './OrganisationSwitcher';
+import { OrganisationWalletCard } from './PayFromWallet';
 
 const ROLES = [
   ['owner', 'Owner: everything, including publishing and members'],
@@ -54,6 +55,8 @@ export default function Organisation() {
 
         <Members org={org} me={auth.me} />
       </div>
+
+      <OrganisationWalletCard org={org} />
     </div>
   );
 }

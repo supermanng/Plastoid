@@ -3,6 +3,12 @@ using Plastoids.SharedKernel.Results;
 
 namespace Plastoids.Modules.Payments.Domain;
 
+public static class PaymentMethods
+{
+    public const string Gateway = "gateway";
+    public const string Units = "units";
+}
+
 public enum PaymentStatus
 {
     Pending = 0,
@@ -47,6 +53,15 @@ public sealed class PaymentIntent : Entity
     public Money RefundedAmount { get; private set; }
     public Guid? LedgerEntryId { get; private set; }
 
+    /// <summary>"gateway" (hosted checkout) or "units" (settled from a unit wallet, ADR 0018).</summary>
+    public string PaymentMethod { get; private set; } = PaymentMethods.Gateway;
+    public long UnitsCharged { get; private set; }
+    public long UnitRateKobo { get; private set; }
+    public long UnitsValueKobo { get; private set; }
+    public Guid? UnitsWalletId { get; private set; }
+
+    public bool PaidWithUnits => PaymentMethod == PaymentMethods.Units;
+
     public static PaymentIntent Create(Guid tenantId, Guid payerId, string purpose, Guid referenceId, string? quoteId, string description, Money amount, Guid? payeeUserId, int commissionBps, string ruleCode)
     {
         var commission = amount.Percent(commissionBps / 100m, MidpointRounding.ToEven);
@@ -75,6 +90,22 @@ public sealed class PaymentIntent : Entity
         GatewayReference = gatewayReference;
         CheckoutUrl = checkoutUrl;
     }
+
+    /// <summary>Settled from a wallet: no gateway, the "reference" is the wallet transaction. Value is the naira the units were bought for.</summary>
+    public void AttachUnits(Guid walletId, long units, long rateKobo, long valueKobo)
+    {
+        PaymentMethod = PaymentMethods.Units;
+        Gateway = PaymentMethods.Units;
+        GatewayReference = $"units:{Id:N}";
+        CheckoutUrl = string.Empty;
+        UnitsWalletId = walletId;
+        UnitsCharged = units;
+        UnitRateKobo = rateKobo;
+        UnitsValueKobo = valueKobo;
+    }
+
+    /// <summary>Units to hand back for a (partial) refund: pro rata to the amount, rounded half to even.</summary>
+    public long UnitsToRefund(Money amount) => Amount.IsZero ? 0 : (long)Math.Round((decimal)UnitsCharged * amount.AmountKobo / Amount.AmountKobo, 0, MidpointRounding.ToEven);
 
     /// <summary>Returns true the first time; later calls (duplicate webhook, verify after webhook) are no-ops.</summary>
     public bool MarkSucceeded(Money gatewayFee, DateTime utcNow, Guid ledgerEntryId)

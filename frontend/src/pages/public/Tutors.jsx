@@ -5,6 +5,7 @@ import { BadgeCheck, Search, Star, Users, X } from 'lucide-react';
 import { Avatar, Button, Card, Chip, EmptyState, ErrorAlert, Field, Input, PageHeader, Pagination, Select, Skeleton } from '../../components/ui';
 import { useCursor, useDebounce, useQueryParams } from '../../lib/hooks';
 import { formatMoney, nairaToKobo, titleCase } from '../../lib/format';
+import { UnitPrice } from '../../lib/units.jsx';
 import { LANGUAGES, listTutors, queryKeys, TEACHING_FORMATS } from '../../api/public';
 
 const DEFAULTS = Object.freeze({ q: '', skill: '', maxRate: '', lang: '', format: '' });
@@ -86,7 +87,7 @@ export function TutorCard({ t }) {
       </div>
       <div className="flex flex-wrap gap-1">{(t.subjects || []).slice(0, 4).map((s) => <span key={s} className="rounded-chip bg-surface px-2 py-0.5 text-xs font-semibold text-muted">{s}</span>)}</div>
       <div className="mt-auto flex items-center justify-between text-sm">
-        <span className="font-bold text-navy tabular">{formatMoney(t.hourlyRate)}<span className="text-xs font-normal text-muted">/hour</span></span>
+        <span className="inline-flex items-baseline gap-1"><UnitPrice money={t.hourlyRate} size="sm" /><span className="text-xs text-muted">/hour</span></span>
         <span className="flex items-center gap-1 text-muted"><Star className="h-4 w-4 text-warn" aria-hidden />{t.ratingCount ? `${Number(t.ratingAverage).toFixed(1)} (${t.ratingCount})` : 'New tutor'}</span>
       </div>
       <div className="text-xs text-muted">{(t.formats || []).map(titleCase).join(' · ')}</div>

@@ -18,6 +18,7 @@ internal sealed class CreatePaymentIntentHandler(
     IPaymentGateway gateway,
     IFeeRules fees,
     IPriceQuoteReader quotes,
+    UnitCheckout units,
     IOptions<PaymentOptions> options,
     ICurrentUser currentUser,
     ICurrentTenant tenant,
@@ -34,6 +35,11 @@ internal sealed class CreatePaymentIntentHandler(
         Guid referenceId;
         Guid? payeeUserId;
         string description;
+        if (request.Purpose == PaymentPurposes.Units)
+        {
+            return Error.Validation("purpose_invalid", "Buy units through POST /wallet/purchases.");
+        }
+
         if (request.Purpose == PaymentPurposes.Course)
         {
             var quote = await quotes.GetAsync(request.QuoteId!, cancellationToken);
@@ -62,6 +68,18 @@ internal sealed class CreatePaymentIntentHandler(
 
         var fee = fees.Resolve(new SaleContext(request.Purpose, request.LearnerSource ?? LearnerSources.Platform));
         var intent = PaymentIntent.Create(tenant.TenantId, payerId, request.Purpose, referenceId, request.QuoteId, description, amount, payeeUserId, fee.CommissionBps, fee.RuleCode);
+
+        if (request.PayWithUnits)
+        {
+            db.Intents.Add(intent);
+            var paid = await units.PayAsync(intent, cancellationToken);
+            if (paid.IsFailure)
+            {
+                return Result.Failure<CreatePaymentIntentResponse>(paid.Error);
+            }
+
+            return new CreatePaymentIntentResponse(intent.Id, intent.Gateway, intent.GatewayReference, null, amount, fee.CommissionBps, intent.Status.ToString().ToLowerInvariant(), intent.PaymentMethod, intent.UnitsCharged, intent.UnitRateKobo);
+        }
 
         var callback = new Uri($"{options.Value.CallbackBaseUrl.TrimEnd('/')}/{intent.Id:N}");
         var email = $"{payerId:N}@{options.Value.PayerEmailFallbackDomain}";

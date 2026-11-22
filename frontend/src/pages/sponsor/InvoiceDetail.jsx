@@ -6,6 +6,7 @@ import { Alert, Breadcrumb, Button, Card, CardHeader, ErrorAlert, KeyValue, Load
 import { formatDate, formatDateTime, formatMoney, koboOf } from '../../lib/format';
 import { invoiceMemory, sponsorApi, sponsorKeys } from '../../api/sponsor';
 import { useOrganisation } from './useOrganisation';
+import { PayFromWallet } from './PayFromWallet';
 import { NoOrganisation } from './OrganisationSwitcher';
 
 /*
@@ -87,6 +88,7 @@ export default function InvoiceDetail() {
         </Card>
 
         <div className="space-y-4">
+          {outstanding > 0 && inv.programmeId ? <PayFromWallet org={org} programmeId={inv.programmeId} outstanding={inv.outstanding} invoiceId={inv.invoiceId} /> : null}
           <Card>
             <CardHeader title="Pay by bank transfer" description="Dedicated virtual account for this invoice; payments are matched automatically." />
             {inv.virtualAccountNumber ? (

@@ -6,6 +6,7 @@ import { Alert, Button, Card, CardHeader, EmptyState, ErrorAlert, Field, FormGri
 import { useAuth } from '../../lib/auth';
 import { useAction } from '../../lib/hooks';
 import { formatDate, formatMoney, koboOf } from '../../lib/format';
+import { UnitPrice } from '../../lib/units.jsx';
 import { checkEligibility, describeReason, describeRule, EDUCATION_LEVELS, EMPLOYMENT_STATUSES, findOpportunity, NIGERIAN_STATES, queryKeys } from '../../api/public';
 
 /** /opportunities/:programmeId — details, eligibility checklist and instant check, apply CTA. */
@@ -45,7 +46,7 @@ export default function OpportunityDetail() {
             cols={3}
             items={[
               ['Seats', `${o.seats} total · ${o.seatsOpen} open`],
-              ['Your cost', free ? 'Nothing. Fully sponsored.' : `${formatMoney(o.coPayPerSeat)} co-payment per seat`],
+              ['Your cost', free ? 'Nothing. Fully sponsored.' : <><UnitPrice money={o.coPayPerSeat} size="sm" inline /> co-payment per seat</>],
               ['Entry assessment', o.hasEntryAssessment ? 'Yes, timed, online' : 'None'],
               ['Applications close', o.applicationsCloseAt ? formatDate(o.applicationsCloseAt) : 'Until seats fill'],
               ['Programme runs', o.startsAt ? `${formatDate(o.startsAt)}${o.endsAt ? ` → ${formatDate(o.endsAt)}` : ''}` : 'Dates to be announced'],

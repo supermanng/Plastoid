@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import {
   Award, BarChart3, Bell, BookOpen, Briefcase, Building2, CalendarDays, ChevronDown, ClipboardList, Compass, CreditCard,
   FolderKanban, GraduationCap, Home, Landmark, LayoutDashboard, LogOut, MessageSquare, Settings, ShieldCheck,
-  Sparkles, User, Users, Wallet, Flag, History, Receipt, Percent, KeyRound, Mail,
+  Sparkles, User, Users, Wallet, Flag, History, Receipt, Percent, KeyRound, Mail, Coins,
 } from 'lucide-react';
 import { Logo, LogoMark } from '../Logo';
 import { Avatar } from '../ui';
@@ -28,6 +28,7 @@ const NAVS = {
       { to: '/learn/bookings', label: 'Tutor sessions', icon: CalendarDays },
       { to: '/learn/certificates', label: 'Certificates', icon: Award },
       { to: '/learn/payments', label: 'Payments', icon: CreditCard },
+      { to: '/learn/wallet', label: 'Wallet', icon: Coins },
       { to: '/learn/messages', label: 'Messages', icon: MessageSquare, mobile: true },
       { to: '/learn/profile', label: 'Profile', icon: User, mobile: true },
     ],
@@ -41,6 +42,7 @@ const NAVS = {
       { to: '/tutor/courses', label: 'Courses', icon: BookOpen },
       { to: '/tutor/cohorts', label: 'Students', icon: Users, mobile: true },
       { to: '/tutor/earnings', label: 'Earnings', icon: Wallet, mobile: true },
+      { to: '/learn/wallet', label: 'Wallet', icon: Coins },
       { to: '/tutor/profile', label: 'Profile', icon: User, mobile: true },
     ],
   },
@@ -52,6 +54,7 @@ const NAVS = {
       { to: '/sponsor/programmes', label: 'Programmes', icon: FolderKanban, mobile: true },
       { to: '/sponsor/organisation', label: 'Organisation', icon: Building2, mobile: true },
       { to: '/sponsor/invoices', label: 'Invoices', icon: Receipt, mobile: true },
+      { to: '/sponsor/wallet', label: 'Wallet', icon: Coins },
       { to: '/learn/profile', label: 'Profile', icon: User, mobile: true },
     ],
   },
@@ -69,6 +72,7 @@ const NAVS = {
       { to: '/admin/finance', label: 'Finance', icon: Landmark, mobile: true },
       { to: '/admin/payouts', label: 'Payouts', icon: Wallet },
       { to: '/admin/fee-rules', label: 'Fee rules', icon: Percent },
+      { to: '/admin/unit-rates', label: 'Unit rate', icon: Coins },
       { to: '/admin/role-grants', label: 'Role grants', icon: KeyRound },
       { to: '/admin/templates', label: 'Templates', icon: Mail },
       { to: '/admin/feature-flags', label: 'Feature flags', icon: Flag },

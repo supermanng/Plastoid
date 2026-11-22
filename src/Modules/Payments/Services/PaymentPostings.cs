@@ -34,6 +34,52 @@ internal static class PaymentPostings
         return new JournalEntryDraft($"payment:{intent.Id:N}:charge", "payment_charge", $"{intent.Purpose} payment {intent.GatewayReference}", postings, occurredAt);
     }
 
+    /// <summary>Entry 11 (ADR 0018): units bought by card/transfer. Dr 1030 gross; Cr 2050 (wallet) the same: cash held against the unit balance, no revenue yet.</summary>
+    public static JournalEntryDraft Entry11UnitPurchase(PaymentIntent intent, DateTime occurredAt)
+        => new($"payment:{intent.Id:N}:charge", "unit_purchase", $"Unit purchase {intent.GatewayReference}",
+            [PostingDraft.Dr(AccountCodes.GatewayReceivable, intent.Amount), PostingDraft.Cr(AccountCodes.UnitBalancesHeld, intent.Amount, SubLedgerOwnerTypes.Wallet, intent.ReferenceId)], occurredAt);
+
+    /// <summary>
+    /// Entry 12 (ADR 0018): a sale paid with units. Dr 2050 (wallet) the naira the units were bought for; Cr tutor payable / commission (or programme
+    /// funds for a co-pay) on the sale price; any gap between the two goes to 4060 (units bought at another rate, or whole-unit rounding).
+    /// </summary>
+    public static JournalEntryDraft Entry12UnitRedemption(PaymentIntent intent, DateTime occurredAt)
+    {
+        var unitsValue = new Money(intent.UnitsValueKobo, intent.Amount.Currency);
+        var postings = new List<PostingDraft> { PostingDraft.Dr(AccountCodes.UnitBalancesHeld, unitsValue, SubLedgerOwnerTypes.Wallet, intent.UnitsWalletId) };
+        if (intent.Purpose == PaymentPurposes.CoPay)
+        {
+            postings.Add(PostingDraft.Cr(AccountCodes.ProgrammeFundsHeld, intent.Amount, SubLedgerOwnerTypes.Programme, intent.ReferenceId));
+        }
+        else
+        {
+            if (!intent.PayeeNet.IsZero)
+            {
+                postings.Add(PostingDraft.Cr(AccountCodes.TutorPayable, intent.PayeeNet, SubLedgerOwnerTypes.Tutor, intent.PayeeUserId));
+            }
+
+            if (!intent.Commission.IsZero)
+            {
+                postings.Add(PostingDraft.Cr(RevenueAccount(intent), intent.Commission));
+            }
+        }
+
+        AddRevaluation(postings, unitsValue, intent.Amount);
+        return new JournalEntryDraft($"payment:{intent.Id:N}:charge", "unit_redemption", $"{intent.Purpose} paid with {intent.UnitsCharged} units", postings, occurredAt);
+    }
+
+    /// <summary>Units released vs. price applied: a surplus is revaluation income (Cr 4060), a shortfall a revaluation cost (Dr 4060).</summary>
+    private static void AddRevaluation(List<PostingDraft> postings, Money released, Money applied)
+    {
+        var gap = released - applied;
+        if (gap.IsZero)
+        {
+            return;
+        }
+
+        postings.Add(gap.IsNegative ? PostingDraft.Dr(AccountCodes.UnitRevaluation, new Money(-gap.AmountKobo, gap.Currency)) : PostingDraft.Cr(AccountCodes.UnitRevaluation, gap));
+    }
+
     /// <summary>Entry 2: gateway settles net of its fee. Dr 1020 net, Dr 5010 fee; Cr 1030 gross.</summary>
     public static JournalEntryDraft Entry2Settlement(PaymentIntent intent, Money fee, DateTime settledAt)
     {
@@ -76,10 +122,14 @@ internal static class PaymentPostings
             }
         }
 
-        // Credit refunds keep the cash: the learner's balance (2030) is the new liability. Card refunds leave client funds (or the receivable before settlement).
-        postings.Add(refund.Destination == RefundDestinations.Credit
-            ? PostingDraft.Cr(AccountCodes.LearnerRefundCredit, refund.Amount, SubLedgerOwnerTypes.Learner, refund.LearnerId ?? intent.PayerId)
-            : PostingDraft.Cr(intent.SettledAt is null ? AccountCodes.GatewayReceivable : AccountCodes.BankClientFunds, refund.Amount));
+        // Credit refunds keep the cash: the learner's balance (2030) is the new liability. Unit refunds restore the unit liability (2050) for the
+        // same wallet. Card refunds leave client funds (or the receivable before settlement).
+        postings.Add(refund.Destination switch
+        {
+            RefundDestinations.Credit => PostingDraft.Cr(AccountCodes.LearnerRefundCredit, refund.Amount, SubLedgerOwnerTypes.Learner, refund.LearnerId ?? intent.PayerId),
+            RefundDestinations.Units => PostingDraft.Cr(AccountCodes.UnitBalancesHeld, refund.Amount, SubLedgerOwnerTypes.Wallet, intent.UnitsWalletId),
+            _ => PostingDraft.Cr(intent.SettledAt is null ? AccountCodes.GatewayReceivable : AccountCodes.BankClientFunds, refund.Amount),
+        });
         return new JournalEntryDraft($"refund:{refund.Id:N}", "refund", $"Refund of {intent.GatewayReference}: {refund.Reason}", postings, occurredAt);
     }
 
@@ -104,5 +154,29 @@ internal static class PaymentPostings
         }
 
         return new JournalEntryDraft($"invoice:{invoice.Id:N}:{alreadyPaid + amountReceived.AmountKobo}", "invoice_paid", $"Invoice {invoice.Number} paid", postings, occurredAt);
+    }
+
+    /// <summary>Entry 6 paid with units (ADR 0018): Dr 2050 (wallet) the naira released; Cr 2020 / 2040 as for a transfer; the gap to 4060.</summary>
+    public static JournalEntryDraft Entry6InvoicePaidFromUnits(Invoice invoice, Money amountApplied, Money unitsValue, Guid walletId, DateTime occurredAt)
+    {
+        var currency = amountApplied.Currency;
+        var alreadyPaid = invoice.PaidAmount.AmountKobo;
+        var fundsRemaining = Math.Max(0, invoice.Subtotal.AmountKobo - alreadyPaid);
+        var fundsPortionKobo = Math.Min(amountApplied.AmountKobo, fundsRemaining);
+        var vatPortionKobo = amountApplied.AmountKobo - fundsPortionKobo;
+
+        var postings = new List<PostingDraft> { PostingDraft.Dr(AccountCodes.UnitBalancesHeld, unitsValue, SubLedgerOwnerTypes.Wallet, walletId) };
+        if (fundsPortionKobo > 0)
+        {
+            postings.Add(PostingDraft.Cr(AccountCodes.ProgrammeFundsHeld, new Money(fundsPortionKobo, currency), SubLedgerOwnerTypes.Programme, invoice.ProgrammeId ?? invoice.OrganisationId));
+        }
+
+        if (vatPortionKobo > 0)
+        {
+            postings.Add(PostingDraft.Cr(AccountCodes.VatPayable, new Money(vatPortionKobo, currency)));
+        }
+
+        AddRevaluation(postings, unitsValue, amountApplied);
+        return new JournalEntryDraft($"invoice:{invoice.Id:N}:units:{alreadyPaid + amountApplied.AmountKobo}", "invoice_paid_units", $"Invoice {invoice.Number} paid with units", postings, occurredAt);
     }
 }

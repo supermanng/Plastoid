@@ -1,3 +1,5 @@
+using Plastoids.SharedKernel.Messaging;
+using Plastoids.Modules.Ledger.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Plastoids.Infrastructure.Integrations;
 using Plastoids.Infrastructure.Persistence;
@@ -69,8 +71,62 @@ internal sealed class InvoiceIssuer(PaymentsDbContext db, IPaymentGateway gatewa
 }
 
 /// <summary>Implementation of <see cref="ISponsorInvoicing"/>: enlists the Payments context in the caller's unit of work.</summary>
-internal sealed class SponsorInvoicing(PaymentsDbContext db, IUnitOfWork unitOfWork, InvoiceIssuer issuer, ICurrentUser currentUser) : ISponsorInvoicing
+internal sealed class SponsorInvoicing(PaymentsDbContext db, IUnitOfWork unitOfWork, InvoiceIssuer issuer, ILedgerService ledger, IOutbox outbox, ICurrentUser currentUser, IClock clock) : ISponsorInvoicing
 {
+    public async Task<SponsorInvoiceSummary?> GetAsync(Guid invoiceId, CancellationToken cancellationToken)
+    {
+        if (unitOfWork.IsActive)
+        {
+            await unitOfWork.EnlistAsync(db, cancellationToken);
+        }
+
+        var invoice = await db.Invoices.AsNoTracking().SingleOrDefaultAsync(i => i.Id == invoiceId, cancellationToken);
+        return invoice is null ? null : Summary(invoice);
+    }
+
+    /// <summary>Units already taken from the organisation's wallet settle the invoice: entry 6 (units variant), then the same invoice-paid event as a transfer.</summary>
+    public async Task<Result<SponsorInvoiceSummary>> SettleFromUnitsAsync(SettleInvoiceFromUnitsRequest request, CancellationToken cancellationToken)
+    {
+        if (unitOfWork.IsActive)
+        {
+            await unitOfWork.EnlistAsync(db, cancellationToken);
+        }
+
+        var invoice = await db.Invoices.SingleOrDefaultAsync(i => i.Id == request.InvoiceId, cancellationToken);
+        if (invoice is null)
+        {
+            return Error.NotFound("invoice_not_found", "No such invoice.");
+        }
+
+        if (request.Amount.IsNegative || request.Amount.IsZero || request.Amount > invoice.Outstanding)
+        {
+            return Error.Validation("invoice_amount_invalid", $"Amount must be positive and at most the outstanding {invoice.Outstanding}.");
+        }
+
+        var now = clock.UtcNow;
+        var entry = await ledger.PostAsync(PaymentPostings.Entry6InvoicePaidFromUnits(invoice, request.Amount, request.UnitsValue, request.WalletId, now), cancellationToken);
+        if (entry.IsFailure)
+        {
+            return Result.Failure<SponsorInvoiceSummary>(entry.Error);
+        }
+
+        var match = invoice.ApplyTransfer(request.Amount, now, entry.Value);
+        if (match.IsFailure)
+        {
+            return Result.Failure<SponsorInvoiceSummary>(match.Error);
+        }
+
+        db.Transfers.Add(IncomingTransfer.Record(invoice.TenantId, request.Reference, invoice.VirtualAccountNumber ?? "units", request.Amount, now, invoice.Id, match.Value == TransferMatch.Matched ? "matched" : "partial"));
+        if (match.Value == TransferMatch.Matched)
+        {
+            outbox.Enqueue(new InvoicePaid(invoice.Id, invoice.Id, invoice.OrganisationId, invoice.ProgrammeId, invoice.Total));
+        }
+
+        return Summary(invoice);
+    }
+
+    private static SponsorInvoiceSummary Summary(Invoice invoice) => new(invoice.Id, invoice.Number, invoice.OrganisationId, invoice.ProgrammeId, invoice.Total, invoice.Outstanding, invoice.Status.ToString().ToLowerInvariant());
+
     public async Task<Result<SponsorInvoiceHandle>> IssueAsync(SponsorInvoiceRequest request, CancellationToken cancellationToken)
     {
         if (unitOfWork.IsActive)

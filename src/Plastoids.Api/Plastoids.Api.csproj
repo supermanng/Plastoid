@@ -11,6 +11,7 @@
     <ProjectReference Include="../Modules/Catalogue/Plastoids.Modules.Catalogue.csproj" />
     <ProjectReference Include="../Modules/Ledger/Plastoids.Modules.Ledger.csproj" />
     <ProjectReference Include="../Modules/Payments/Plastoids.Modules.Payments.csproj" />
+    <ProjectReference Include="../Modules/Wallet/Plastoids.Modules.Wallet.csproj" />
     <ProjectReference Include="../Modules/Booking/Plastoids.Modules.Booking.csproj" />
     <ProjectReference Include="../Modules/Lms/Plastoids.Modules.Lms.csproj" />
     <ProjectReference Include="../Modules/Certificates/Plastoids.Modules.Certificates.csproj" />

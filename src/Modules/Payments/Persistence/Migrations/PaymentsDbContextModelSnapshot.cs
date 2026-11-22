@@ -645,6 +645,12 @@ namespace Plastoids.Modules.Payments.Persistence.Migrations
                         .HasColumnType("binary(16)")
                         .HasColumnName("payer_id");
 
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("payment_method");
+
                     b.Property<string>("Purpose")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -686,6 +692,22 @@ namespace Plastoids.Modules.Payments.Persistence.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("binary(16)")
                         .HasColumnName("tenant_id");
+
+                    b.Property<long>("UnitRateKobo")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_rate_kobo");
+
+                    b.Property<long>("UnitsCharged")
+                        .HasColumnType("bigint")
+                        .HasColumnName("units_charged");
+
+                    b.Property<long>("UnitsValueKobo")
+                        .HasColumnType("bigint")
+                        .HasColumnName("units_value_kobo");
+
+                    b.Property<Guid?>("UnitsWalletId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("units_wallet_id");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")

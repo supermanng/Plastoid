@@ -18,11 +18,11 @@ using Plastoids.SharedKernel.Tenancy;
 namespace Plastoids.Modules.Booking.Features.Sessions.CreateSessionPackage;
 
 /// <summary>Buy 5 or 10 sessions up front (10 % off the ten-pack). Money write → Idempotency-Key.</summary>
-public sealed record CreateSessionPackageCommand(Guid TutorId, int Sessions, int DurationMinutes, string Format, string IdempotencyKey) : ICommand<CreateSessionPackageResponse>, IIdempotentCommand;
+public sealed record CreateSessionPackageCommand(Guid TutorId, int Sessions, int DurationMinutes, string Format, bool PayWithUnits, string IdempotencyKey) : ICommand<CreateSessionPackageResponse>, IIdempotentCommand;
 
-public sealed record CreateSessionPackageRequest(Guid TutorId, int Sessions, int DurationMinutes, string Format);
+public sealed record CreateSessionPackageRequest(Guid TutorId, int Sessions, int DurationMinutes, string Format, bool PayWithUnits = false);
 
-public sealed record CreateSessionPackageResponse(Guid PackageId, int Sessions, Money PricePerSession, Money Total, Guid PaymentIntentId, Uri CheckoutUrl);
+public sealed record CreateSessionPackageResponse(Guid PackageId, int Sessions, Money PricePerSession, Money Total, Guid PaymentIntentId, Uri? CheckoutUrl);
 
 internal sealed class CreateSessionPackageValidator : AbstractValidator<CreateSessionPackageCommand>
 {
@@ -66,7 +66,7 @@ internal sealed class CreateSessionPackageHandler(BookingDbContext db, ITutorSch
 
         var package = created.Value;
         db.Packages.Add(package);
-        var intent = await payments.CreateIntentAsync(new IntentRequest(learnerId, PaymentPurposes.Booking, package.Id, package.Total, tutor.UserId, $"Package of {request.Sessions} {request.DurationMinutes}-minute sessions"), cancellationToken);
+        var intent = await payments.CreateIntentAsync(new IntentRequest(learnerId, PaymentPurposes.Booking, package.Id, package.Total, tutor.UserId, $"Package of {request.Sessions} {request.DurationMinutes}-minute sessions", PayWithUnits: request.PayWithUnits), cancellationToken);
         if (intent.IsFailure)
         {
             return Result.Failure<CreateSessionPackageResponse>(intent.Error);
@@ -84,7 +84,7 @@ internal static class CreateSessionPackageEndpoint
         group.MapPost("/packages", async (CreateSessionPackageRequest body, HttpContext http, ISender sender, CancellationToken ct) =>
             {
                 var key = http.Request.Headers["Idempotency-Key"].FirstOrDefault() ?? string.Empty;
-                return (await sender.Send(new CreateSessionPackageCommand(body.TutorId, body.Sessions, body.DurationMinutes, body.Format, key), ct)).ToCreatedResult(r => $"/api/v1/bookings/packages/{r.PackageId}");
+                return (await sender.Send(new CreateSessionPackageCommand(body.TutorId, body.Sessions, body.DurationMinutes, body.Format, body.PayWithUnits, key), ct)).ToCreatedResult(r => $"/api/v1/bookings/packages/{r.PackageId}");
             })
             .WithName("CreateSessionPackage")
             .WithSummary("Buy a 5- or 10-session package (10 % off the ten-pack). Requires Idempotency-Key.")

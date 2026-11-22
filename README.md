@@ -152,6 +152,17 @@ forwarded-headers support (`Hosting:KnownProxies`), and a production guard again
 `docs/runbooks/`. Traceability: `docs/mvp-traceability.md`. Load test: `perf/` (k6) with results to be recorded in
 `docs/perf.md`. See `docs/adr/0016`.
 
+## Units wallet (ADR 0018)
+
+Every payment buys **units**: learners and organisations hold a prepaid wallet, the naira value of a unit is set by
+staff (`POST /admin/wallet/rates`, four-eyes; `Wallet:DefaultRateKobo` = ₦1,000 until one is approved) and prices are shown
+as `ceil(naira / rate)` units from the public `GET /wallet/rate`. `POST /wallet/purchases` starts a checkout for units
+(entry 11: cash held in 2050 per wallet); `POST /payments/intents { payWithUnits: true }` settles a sale from the wallet at
+once (entry 12: lots released first-in first-out, tutor payable and commission as usual, rate gaps to 4060); refunds of a
+units sale go back to the wallet; sponsors can settle a programme invoice from the organisation wallet with
+`POST …/programmes/{id}/fund-from-wallet`. Units are never paid out as cash. Tests: `Plastoids.Modules.Wallet.Tests`,
+`UnitPostingsTests` and `IntegrationTests/WalletTests.cs`.
+
 ## Web app (React)
 
 `frontend/` is a Vite + React 19 single-page app covering the public site, learner, tutor, sponsor and back-office areas

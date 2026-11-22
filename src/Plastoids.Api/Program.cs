@@ -21,6 +21,7 @@ using Plastoids.Modules.Notifications;
 using Plastoids.Modules.Payouts;
 using Plastoids.Modules.Sponsorship;
 using Plastoids.Modules.Tutors;
+using Plastoids.Modules.Wallet;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,6 +42,7 @@ services.AddModule<TutorsModule>(configuration);
 services.AddModule<CatalogueModule>(configuration);
 services.AddModule<LedgerModule>(configuration);
 services.AddModule<PaymentsModule>(configuration);
+services.AddModule<WalletModule>(configuration);
 services.AddModule<BookingModule>(configuration);
 services.AddModule<LmsModule>(configuration);
 services.AddModule<CertificatesModule>(configuration);

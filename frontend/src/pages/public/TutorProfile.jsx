@@ -6,6 +6,7 @@ import { Alert, Avatar, Button, Card, CardHeader, EmptyState, ErrorAlert, Field,
 import { useAuth } from '../../lib/auth';
 import { useAction } from '../../lib/hooks';
 import { formatDate, formatDateTime, formatMoney, formatTime, titleCase } from '../../lib/format';
+import { UnitPrice } from '../../lib/units.jsx';
 import { createBooking, createPackage, findTutor, getAvailability, goToCheckout, lockSlot, queryKeys, quoteBooking, TEACHING_FORMATS } from '../../api/public';
 
 const DURATIONS = [30, 60, 90];
@@ -43,7 +44,7 @@ export default function TutorProfile() {
             </div>
           </div>
           <KeyValue className="mt-6" cols={3} items={[
-            ['Hourly rate', `${formatMoney(t.hourlyRate)} / hour`],
+            ['Hourly rate', <><UnitPrice money={t.hourlyRate} size="sm" inline /> / hour</>],
             ['Formats', (t.formats || []).map(titleCase).join(', ') || '—'],
             ['Verification', <StatusPill tone="success" status="verified" label="Identity, credentials and demo lesson" />],
           ]} />
@@ -170,7 +171,7 @@ function BookingDialog({ tutor, slot, formats, alternatives, onClose, onPick }) 
           {quote.isError ? <ErrorAlert error={quote.error} title="No price for this combination" /> : null}
           {quote.data ? (
             <div className="rounded-card bg-surface p-3 text-sm">
-              <div className="flex justify-between"><span className="text-muted">{quote.data.durationMinutes} min · {titleCase(quote.data.format)}</span><strong className="tabular">{formatMoney(quote.data.price)}</strong></div>
+              <div className="flex justify-between"><span className="text-muted">{quote.data.durationMinutes} min · {titleCase(quote.data.format)}</span><UnitPrice money={quote.data.price} size="sm" inline /></div>
               <div className="mt-1 text-xs text-muted">Slot held for 10 minutes while you pay. Cancel more than 24 h ahead for a full refund; 50% within 24 h.</div>
             </div>
           ) : null}

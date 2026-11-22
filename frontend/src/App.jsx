@@ -43,6 +43,7 @@ const MyBookings = lazy(() => import('./pages/learn/Bookings'));
 const BookingDetail = lazy(() => import('./pages/learn/BookingDetail'));
 const MyCertificates = lazy(() => import('./pages/learn/Certificates'));
 const MyPayments = lazy(() => import('./pages/learn/Payments'));
+const MyWallet = lazy(() => import('./pages/learn/Wallet'));
 const PaymentDetail = lazy(() => import('./pages/learn/PaymentDetail'));
 const PaymentReturn = lazy(() => import('./pages/learn/PaymentReturn'));
 const Messages = lazy(() => import('./pages/learn/Messages'));
@@ -71,6 +72,7 @@ const SponsorProgrammes = lazy(() => import('./pages/sponsor/Programmes'));
 const CampaignBuilder = lazy(() => import('./pages/sponsor/CampaignBuilder'));
 const ProgrammeDetail = lazy(() => import('./pages/sponsor/ProgrammeDetail'));
 const SponsorInvoices = lazy(() => import('./pages/sponsor/Invoices'));
+const SponsorWallet = lazy(() => import('./pages/sponsor/Wallet'));
 const InvoiceDetail = lazy(() => import('./pages/sponsor/InvoiceDetail'));
 
 // Back office
@@ -87,6 +89,7 @@ const AdminFinance = lazy(() => import('./pages/admin/Finance'));
 const AdminPayouts = lazy(() => import('./pages/admin/Payouts'));
 const AdminPayoutBatch = lazy(() => import('./pages/admin/PayoutBatch'));
 const AdminFeeRules = lazy(() => import('./pages/admin/FeeRules'));
+const AdminUnitRates = lazy(() => import('./pages/admin/UnitRates'));
 const AdminRoleGrants = lazy(() => import('./pages/admin/RoleGrants'));
 const AdminTemplates = lazy(() => import('./pages/admin/Templates'));
 const AdminFeatureFlags = lazy(() => import('./pages/admin/FeatureFlags'));
@@ -144,6 +147,7 @@ export default function App() {
           <Route path="bookings/:bookingId" element={<BookingDetail />} />
           <Route path="certificates" element={<MyCertificates />} />
           <Route path="payments" element={<MyPayments />} />
+          <Route path="wallet" element={<MyWallet />} />
           <Route path="payments/return" element={<PaymentReturn />} />
           <Route path="payments/return/:paymentIntentId" element={<PaymentReturn />} />
           <Route path="payments/:paymentIntentId" element={<PaymentDetail />} />
@@ -186,6 +190,7 @@ export default function App() {
             <Route path="programmes/:programmeId" element={<ProgrammeDetail />} />
             <Route path="programmes/:programmeId/edit" element={<CampaignBuilder />} />
             <Route path="invoices" element={<SponsorInvoices />} />
+            <Route path="wallet" element={<SponsorWallet />} />
             <Route path="invoices/:invoiceId" element={<InvoiceDetail />} />
           </Route>
         </Route>
@@ -205,6 +210,7 @@ export default function App() {
           <Route path="payouts" element={<AdminPayouts />} />
           <Route path="payouts/:batchId" element={<AdminPayoutBatch />} />
           <Route path="fee-rules" element={<AdminFeeRules />} />
+          <Route path="unit-rates" element={<AdminUnitRates />} />
           <Route path="role-grants" element={<AdminRoleGrants />} />
           <Route path="templates" element={<AdminTemplates />} />
           <Route path="feature-flags" element={<AdminFeatureFlags />} />

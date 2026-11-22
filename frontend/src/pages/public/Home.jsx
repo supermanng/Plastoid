@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Award, BookOpen, Briefcase, GraduationCap, Search, ShieldCheck, Sparkles, Star, Users } from 'lucide-react';
 import { Button, Card, Skeleton, StatusPill } from '../../components/ui';
 import { api } from '../../lib/api';
-import { formatDate, formatMoney, koboOf } from '../../lib/format';
+import { formatDate, koboOf } from '../../lib/format';
+import { UnitPrice } from '../../lib/units.jsx';
 
 /*
  * Public homepage (blueprint §14 core screens): hero with search, sponsored opportunities strip, categories,
@@ -185,7 +186,7 @@ export function OpportunityCard({ o }) {
         <p className="mt-0.5 text-sm text-muted">{o.courseTitle || 'Custom programme'} · by {o.sponsorName}</p>
       </div>
       <div className="mt-auto flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-        <span>{free ? 'No co-payment' : `You pay ${formatMoney(o.coPayPerSeat)}`}</span>
+        <span>{free ? 'No co-payment' : <>You pay <UnitPrice money={o.coPayPerSeat} size="sm" inline /></>}</span>
         {o.applicationsCloseAt ? <span>Closes {formatDate(o.applicationsCloseAt)}</span> : null}
       </div>
     </Card>
@@ -204,7 +205,7 @@ export function CourseCard({ c }) {
         <p className="mt-0.5 line-clamp-2 text-sm text-muted">{c.summary}</p>
       </div>
       <div className="mt-auto flex items-center justify-between text-sm">
-        <span className="font-bold text-navy">{c.fromPrice ? `From ${formatMoney(c.fromPrice)}` : 'Free'}</span>
+        {c.fromPrice ? <UnitPrice money={c.fromPrice} size="sm" prefix="From " /> : <span className="font-bold text-navy">Free</span>}
         <span className="flex items-center gap-1 text-muted">
           <Star className="h-4 w-4 text-warn" aria-hidden />
           {c.ratingCount ? `${Number(c.ratingAverage).toFixed(1)} (${c.ratingCount})` : 'New course'}

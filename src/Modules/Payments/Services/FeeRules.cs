@@ -44,6 +44,7 @@ internal sealed class FeeRules(PaymentsDbContext db, IUnitOfWork unitOfWork, IOp
     {
         PaymentPurposes.Booking => "live_tutoring",
         PaymentPurposes.CoPay => "co_pay",
+        PaymentPurposes.Units => "units",
         _ when context.LearnerSource == LearnerSources.TutorReferred => "course_tutor_referred",
         _ => "course_platform",
     };
@@ -53,6 +54,7 @@ internal sealed class FeeRules(PaymentsDbContext db, IUnitOfWork unitOfWork, IOp
         "live_tutoring" => o.LiveTutoringBps,
         "co_pay" => o.CoPayBps,
         "course_tutor_referred" => o.CourseTutorReferredBps,
+        "units" => 0,
         _ => o.CoursePlatformBps,
     };
 
