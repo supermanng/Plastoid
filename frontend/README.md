@@ -1,6 +1,6 @@
 # Plastoids web app
 
-React 19 + Vite single-page app for the Plastoids API: public site, learner, tutor, sponsor and back-office areas. Plain JavaScript (JSX), Tailwind CSS v4 themed with the blueprint's design tokens (§14), React Router 7 and TanStack Query 5.
+React 19 + Vite web app for the Plastoids API, built as three interface modules (ADR 0020) from one package: the **Learner** module (public site, learner and tutor areas), the **Sponsor** module (organisation portal) and the **Administration** module (back office). Plain JavaScript (JSX), Tailwind CSS v4 themed with the blueprint's design tokens (§14), React Router 7 and TanStack Query 5.
 
 ## Run it
 
@@ -12,7 +12,7 @@ make run
 make web
 ```
 
-Or from this folder: `npm install` then `npm run dev`. Open http://localhost:5173.
+Or from this folder: `npm install` then `npm run dev`. Open http://localhost:5173. The dev server serves all three modules on that one port: `/` (learner), `/sponsor/...` and `/admin/...` each fall back to their module's HTML, so deep links work.
 
 Sign-in options locally:
 
@@ -25,24 +25,57 @@ Payments and payouts use fake providers locally: the fake gateway's checkout URL
 ## Layout
 
 ```
-src/
-  main.jsx            providers (Query, Router, Toast, Auth)
-  App.jsx             route map; every page is lazy-loaded
-  index.css           Tailwind v4 @theme tokens (navy/royal/cyan/teal, surface/line/muted, fonts, radii)
+index.html, sponsor/index.html, admin/index.html   one HTML entry per module (scripts src/modules/<module>/main.jsx)
+src/shared/                                        everything more than one module uses; must not import from src/modules
   lib/api.js          fetch wrapper: /api/v1 base, Bearer + refresh_token retry, Idempotency-Key on commands, ApiError from problem details
-  lib/auth.jsx        AuthProvider, useAuth, RequireAuth(role, mfa), homeFor(roles)
+  lib/auth.jsx        AuthProvider, useAuth, RequireAuth(role, mfa) → the current module's sign-in / mfa / no-access pages, homeFor(roles)
+  lib/navigation.js   MODULES bases, moduleOf/currentModule, <AppLink> and navigateTo() for links that may leave the module
   lib/hooks.js        useQueryParams, useAction (mutation + toast + invalidate), useForm, useCursor, pageOf
   lib/format.js       formatMoney ({ amount: kobo, currency }), dates, titleCase …
+  lib/units.jsx       units wallet helpers (ADR 0018); lib/authoring.js, lib/engagementTerms.js: course builder + engagement helpers
   components/ui.jsx   Button, Card, PageHeader, Stat, StatusPill, Field/Input/Select, Table, Tabs, Stepper, Modal, ConfirmDialog, Toast …
-  components/layout/  PublicLayout (header/footer), AppShell (sidebar on desktop, bottom tabs on mobile)
-  api/<area>.js       query functions and keys per area
+  components/layout/Shell.jsx   the signed-in shell (sidebar, top bar, bottom tabs, user menu); each module passes its nav + area switcher
+  components/course-authoring/  AuthoringEditor (lesson builder), CourseForm, builder modals — used by the tutor and sponsor modules
+  components/         Logo, WalletPanels, EarningsStatement
+  pages/auth          phone OTP sign-in, staff email sign-in, MFA enrol/challenge, no-access (mounted inside every module)
+  api/public.js, api/wallet.js, api/course.js   query functions shared across modules
+  styles/index.css    Tailwind v4 @theme tokens (navy/royal/cyan/teal, surface/line/muted, fonts, radii)
+src/modules/learner/   router basename `/`: public site, auth, /learn/*, /tutor/*
+  main.jsx, App.jsx, layout/{PublicLayout,AppShell}.jsx, api/{learn,tutor}.js
   pages/public        home, courses, compare, course detail, opportunities, tutors, booking, verify, marketing pages
-  pages/auth          phone OTP sign-in, staff email sign-in, MFA enrol/challenge, no-access
-  pages/learn         dashboard, onboarding, my courses + player (video/doc/quiz/assignment), applications, bookings, certificates, payments, messages, notifications, profile
-  pages/tutor         onboarding (5 verification stages), dashboard, profile (availability/pricing/payout account), courses + lesson builder (shared with the organisation portal), offers (engagements), gradebook, cohorts, sessions, earnings
-  pages/sponsor       register organisation, dashboard, organisation members, programmes, campaign stepper, programme detail (budget/funnel/report), invoices, courses + editor + course tutors (engagements), payouts (ADR 0019)
-  pages/admin         dashboard, queues, users, tutors, sponsors, programmes + applications review, course moderation, finance (ledger/reconciliation/settlements/refunds), payouts, fee rules, role grants, templates, feature flags, compliance, audit
+  pages/learn         dashboard, onboarding, my courses + player (video/doc/quiz/assignment), applications, bookings, certificates, payments, wallet, messages, notifications, profile
+  pages/tutor         onboarding (5 verification stages), dashboard, profile (availability/pricing/payout account), courses + lesson builder, offers (engagements), gradebook, cohorts, sessions, earnings
+src/modules/sponsor/   router basename `/sponsor`: the organisation portal (sponsors and providers)
+  main.jsx, App.jsx, layout/AppShell.jsx, api/{sponsor,provider}.js
+  pages/              register organisation, dashboard, organisation members, programmes, campaign stepper, programme detail (budget/funnel/report), invoices, wallet, courses + editor + course tutors (engagements), payouts (ADR 0019)
+src/modules/admin/     router basename `/admin`: the back office
+  main.jsx, App.jsx, layout/AppShell.jsx, api/admin.js
+  pages/              dashboard, queues, users, tutors, sponsors, programmes + applications review, course moderation, finance (ledger/reconciliation/settlements/refunds), payouts, fee rules, unit rates, role grants, templates, feature flags, compliance, audit
+scripts/check-module-boundaries.mjs   fails when a module imports another module, or shared imports a module
 ```
+
+### Modules
+
+| Module | Entry | URLs | Who |
+| --- | --- | --- | --- |
+| Learner | `index.html` → `src/modules/learner` | `/`, `/auth/*`, `/learn/*`, `/tutor/*` | everyone; learners and tutors (a tutor is a person account that also learns) |
+| Sponsor | `sponsor/index.html` → `src/modules/sponsor` | `/sponsor/*` (sign-in at `/sponsor/auth/sign-in`) | organisation members: sponsors and course providers |
+| Administration | `admin/index.html` → `src/modules/admin` | `/admin/*` (sign-in at `/admin/auth/staff`) | Plastoids staff |
+
+URLs did not change with the split: each module's router has a `basename`, and the shared auth pages are mounted inside every module so `RequireAuth` can redirect without leaving it. Tokens live in localStorage on the one origin, so a sign-in in one module is valid in all. Inside a module, pages link with ordinary react-router `Link`/`navigate` and module-relative paths (in the sponsor module `/sponsor/courses` is `to="/courses"`). A link that may leave the module (role home, profile and notifications from the sponsor/admin shells, the public course page from the course builder, the area switcher) uses `<AppLink to="/learn/profile">` or `navigateTo(path, navigate)` from `shared/lib/navigation.js`, which stay client-side in-module and become a full-page navigation otherwise. The sponsor and admin shells link to the learner module for profile, notifications and wallet rather than carrying copies of those pages.
+
+### Running or building one module
+
+```bash
+VITE_MODULES=admin npm run build            # only dist/admin/index.html + the assets it needs
+VITE_MODULES=learner,sponsor npm run build  # a subset; default is all three
+```
+
+The dev server always serves all three (open `/`, `/sponsor` or `/admin`). A module can be deployed alone by shipping its HTML and the `assets/` folder; nginx has one `try_files` fallback per module (`nginx.conf`).
+
+### Module boundaries
+
+`npm run boundaries` (also part of `npm run lint`, `make web-lint` and CI) runs `scripts/check-module-boundaries.mjs`: a file under `src/modules/<a>/` may import `src/shared/` and its own module only, and `src/shared/` may not import from `src/modules/`. Code two modules need moves to `src/shared/`.
 
 Conventions the pages follow:
 
@@ -54,12 +87,13 @@ Conventions the pages follow:
 ## Build and deploy
 
 ```bash
-npm run build          # → dist/
-npm run lint           # oxlint
+npm run build          # → dist/ (index.html, sponsor/index.html, admin/index.html + assets/)
+npm run lint           # oxlint + module boundary check
+npm run boundaries     # the boundary check alone
 docker build -t plastoids-web -f frontend/Dockerfile frontend
 ```
 
-The image serves `dist/` with nginx and proxies `/api/` and `/health/` to `API_UPSTREAM` (default `http://api:8080`). To host the SPA on a different origin instead, set `VITE_API_BASE` at build time and `Cors:AllowedOrigins` on the API.
+The image serves `dist/` with nginx (one history fallback per module: `/sponsor/`, `/admin/`, everything else → learner) and proxies `/api/` and `/health/` to `API_UPSTREAM` (default `http://api:8080`). To host the SPA on a different origin instead, set `VITE_API_BASE` at build time and `Cors:AllowedOrigins` on the API.
 
 ## Known gaps (backend reads the UI works around)
 

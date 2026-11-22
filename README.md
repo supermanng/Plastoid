@@ -187,11 +187,15 @@ verified tutors to teach them; learners buy seats as usual and the money splits 
 
 ## Web app (React)
 
-`frontend/` is a Vite + React 19 single-page app covering the public site, learner, tutor, sponsor and back-office areas
-against this API. `make web` runs it on :5173 with `/api` proxied to the API on :5080; `make web-build` produces
-`frontend/dist`, and `frontend/Dockerfile` serves it with nginx proxying `/api/` to the API container. Role gates mirror the
-API policies (tutor, sponsor and staff areas need an MFA-stepped-up token). Details, sign-in notes for development and
-the backend gaps the UI works around are in [frontend/README.md](frontend/README.md) and `docs/adr/0017`.
+`frontend/` is a Vite + React 19 web app against this API, built as three interface modules from one package (ADR 0020):
+the Learner module (`/`: public site, learner and tutor areas), the Sponsor module (`/sponsor`: organisation portal) and the
+Administration module (`/admin`: back office), each with its own HTML entry, router and shell over a shared `src/shared/`
+layer; `scripts/check-module-boundaries.mjs` (in `npm run lint`) keeps modules from importing each other. `make web` runs
+all three on :5173 with `/api` proxied to the API on :5080; `make web-build` produces `frontend/dist` (`VITE_MODULES=admin`
+builds one module), and `frontend/Dockerfile` serves it with nginx (one history fallback per module) proxying `/api/` to
+the API container. Role gates mirror the API policies (tutor, sponsor and staff areas need an MFA-stepped-up token).
+Details, sign-in notes for development and the backend gaps the UI works around are in
+[frontend/README.md](frontend/README.md), `docs/adr/0017` and `docs/adr/0020`.
 
 ## Layout
 
@@ -201,7 +205,7 @@ src/Plastoids.SharedKernel    Result, Money, Entity, IClock, tenancy, CQRS marke
 src/Plastoids.Infrastructure  MySQL conventions, unit of work, outbox/inbox, Kafka, Quartz, behaviours
 src/Modules/<Module>          Domain · Persistence · Contracts · Features/<UseCase> · Consumers · Jobs
 tests/                        SharedKernel.Tests · ArchitectureTests · IntegrationTests
-frontend/                     React 19 + Vite web app (public site, learner, tutor, sponsor, back office); nginx image
+frontend/                     React 19 + Vite web app: learner, sponsor and admin modules over src/shared (ADR 0020); nginx image
 ```
 
 ## Adding a slice
