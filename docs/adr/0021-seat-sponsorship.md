@@ -79,4 +79,6 @@ Errors: `cohort_not_found`, `cohort_ended`, `cohort_full`, `seats_invalid`, `ins
   admin reads. Payouts: a `seat` earning source. Notifications: `sponsorship.seat.allocated`, `sponsorship.seat.invited`.
 - Web app: Sponsor module gets Seats (list, buy, block detail with allocate and release); Learner module shows upcoming
   cohorts on course pages and "Sponsored by" on enrolled courses; Administration gets Seat blocks.
-- Inviting someone who has no account does not yet send them an SMS or email; the seat waits for them to sign up.
+- Inviting someone who has no account sends them an SMS (phone) or an email with the sign-up link (`Web:BaseUrl`); the contact
+  is stored encrypted on the allocation so the sponsor can resend (`POST …/allocations/{allocationId}/resend-invite`). The seat
+  waits for them to sign up with that phone or email.

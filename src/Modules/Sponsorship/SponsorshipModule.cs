@@ -33,6 +33,7 @@ using Plastoids.Modules.Sponsorship.Features.Seats.BuySeats;
 using Plastoids.Modules.Sponsorship.Features.Seats.GetSeatBlock;
 using Plastoids.Modules.Sponsorship.Features.Seats.ListSeatBlocks;
 using Plastoids.Modules.Sponsorship.Features.Seats.ReleaseSeats;
+using Plastoids.Modules.Sponsorship.Features.Seats.ResendInvite;
 using Plastoids.Modules.Sponsorship.Jobs;
 using Plastoids.Modules.Sponsorship.Persistence;
 using Plastoids.Modules.Sponsorship.Services;
@@ -65,6 +66,8 @@ public sealed class SponsorshipModule : IModule
         services.AddScoped<IProgrammeSeats>(sp => sp.GetRequiredService<ProgrammeReader>());
         services.AddScoped<IEligibilityChecker>(sp => sp.GetRequiredService<ProgrammeReader>());
         services.AddScoped<SeatPricing>();
+        services.Configure<WebOptions>(configuration.GetSection(WebOptions.SectionName));
+        services.AddScoped<SeatInviteSender>();
         services.AddScoped<SeatAllocator>();
         services.AddScoped<SeatReleaser>();
         services.AddScoped<MonthlyFeesJob>();
@@ -97,6 +100,7 @@ public sealed class SponsorshipModule : IModule
         GetSeatBlockEndpoint.Map(seats);
         AllocateSeatEndpoint.Map(seats);
         ReleaseSeatsEndpoint.Map(seats);
+        ResendInviteEndpoint.Map(seats);
         SeatBlocksAdminEndpoint.Map(endpoints.MapGroup("/admin/sponsorship/seat-blocks").WithTags("Sponsorship (staff)"));
 
         var opportunities = endpoints.MapGroup("/sponsorship/opportunities").WithTags("Sponsorship");

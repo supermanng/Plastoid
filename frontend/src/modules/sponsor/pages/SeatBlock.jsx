@@ -47,7 +47,12 @@ export default function SeatBlock() {
 
 function BlockView({ org, b }) {
   const closed = b.status !== 'active';
+  const isFinance = org.isFinance;
   const invalidate = [seatsKeys.all(org.organisationId), walletKeys.organisation(org.organisationId)];
+  const resend = useAction((allocationId) => seatsApi.resendInvite(org.organisationId, b.blockId, allocationId), {
+    success: (a) => `Invite sent again by ${a.contactKind === 'email' ? 'email' : 'SMS'} to ${a.contact}`,
+    invalidate,
+  });
   return (
     <>
       <PageHeader
@@ -84,7 +89,8 @@ function BlockView({ org, b }) {
                 { key: 'displayName', header: 'Learner', render: (r) => <span className="font-semibold text-navy">{r.displayName || '—'}</span> },
                 { key: 'contact', header: 'Contact', render: (r) => <span className="font-mono text-xs">{r.contact || '—'}</span> },
                 { key: 'status', header: 'Status', render: (r) => <StatusPill status={r.status} tone={r.status === 'enrolled' ? 'success' : 'warn'} label={ALLOCATION_LABEL[r.status] || r.status} /> },
-                { key: 'dates', header: 'When', render: (r) => <span className="text-xs text-muted">Invited {formatDate(r.invitedAt)}{r.enrolledAt ? <><br />Enrolled {formatDate(r.enrolledAt)}</> : null}</span> },
+                { key: 'dates', header: 'When', render: (r) => <span className="text-xs text-muted">Invited {formatDate(r.invitedAt)}{r.enrolledAt ? <><br />Enrolled {formatDate(r.enrolledAt)}</> : null}{r.status === 'invited' ? <><br />{r.inviteSentAt ? `${r.contactKind === 'email' ? 'Email' : 'SMS'} sent ${formatDate(r.inviteSentAt)}${r.inviteSendCount > 1 ? ` (×${r.inviteSendCount})` : ''}` : 'Invite not sent yet'}</> : null}</span> },
+                { key: 'act', header: '', align: 'right', render: (r) => (r.status === 'invited' && isFinance && !closed ? <Button size="sm" variant="ghost" loading={resend.isPending && resend.variables === r.allocationId} onClick={() => resend.mutate(r.allocationId)}>Resend invite</Button> : null) },
               ]}
             />
           </Card>

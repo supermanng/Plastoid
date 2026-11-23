@@ -112,6 +112,8 @@ public sealed class SponsorshipDbContext(DbContextOptions<SponsorshipDbContext> 
             b.Property(x => x.PhoneHash).HasMaxLength(64);
             b.Property(x => x.Email).HasMaxLength(254);
             b.Property(x => x.ContactMasked).HasMaxLength(254);
+            b.Property(x => x.ContactCiphertext).HasMaxLength(512);
+            b.Ignore(x => x.CanBeInvited);
             b.Property(x => x.PayeeType).HasMaxLength(16);
             b.HasIndex(x => new { x.BlockId, x.SeatNo }).IsUnique();
             b.HasIndex(x => new { x.BlockId, x.LearnerId });

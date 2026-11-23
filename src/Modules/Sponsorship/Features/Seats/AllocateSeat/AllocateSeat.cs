@@ -39,7 +39,7 @@ internal sealed class AllocateSeatValidator : AbstractValidator<AllocateSeatComm
     }
 }
 
-internal sealed class AllocateSeatHandler(SponsorshipDbContext db, IUserDirectory users, IFieldEncryptor encryptor, SeatAllocator allocator, ICurrentUser currentUser, ICurrentTenant tenant, IClock clock)
+internal sealed class AllocateSeatHandler(SponsorshipDbContext db, IUserDirectory users, IFieldEncryptor encryptor, SeatAllocator allocator, SeatInviteSender invites, ICurrentUser currentUser, ICurrentTenant tenant, IClock clock)
     : ICommandHandler<AllocateSeatCommand, SeatAllocationView>
 {
     public async Task<Result<SeatAllocationView>> Handle(AllocateSeatCommand request, CancellationToken cancellationToken)
@@ -99,7 +99,9 @@ internal sealed class AllocateSeatHandler(SponsorshipDbContext db, IUserDirector
         }
 
         var displayName = string.IsNullOrWhiteSpace(request.DisplayName) ? account?.DisplayName ?? masked : request.DisplayName.Trim();
-        var allocation = SeatAllocation.Invite(tenant.TenantId, block, seatNo.Value, displayName, contactKind, phoneHash, email, masked, userId, now);
+        // Nobody with this contact yet: keep it encrypted so the invite can be sent now and resent later; it is never stored in clear.
+        var ciphertext = account is null ? encryptor.Encrypt(e164 ?? email!) : null;
+        var allocation = SeatAllocation.Invite(tenant.TenantId, block, seatNo.Value, displayName, contactKind, phoneHash, email, masked, userId, now, ciphertext);
         if (account is not null)
         {
             var enrolled = await allocator.EnrolAsync(block, allocation, account.UserId, now, cancellationToken);
@@ -107,6 +109,11 @@ internal sealed class AllocateSeatHandler(SponsorshipDbContext db, IUserDirector
             {
                 return Result.Failure<SeatAllocationView>(enrolled.Error);
             }
+        }
+        else
+        {
+            // Best effort: a failed message leaves InviteSentAt empty so the sponsor can resend; the seat itself is kept.
+            await invites.SendAsync(block, allocation, now, cancellationToken);
         }
 
         db.SeatAllocations.Add(allocation);

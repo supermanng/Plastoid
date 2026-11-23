@@ -204,7 +204,12 @@ public sealed class SeatAllocation : Entity
     public string? PhoneHash { get; private set; }
     public string? Email { get; private set; }
     public string ContactMasked { get; private set; } = string.Empty;
+
+    /// <summary>The phone (E.164) or email the invite goes to, encrypted at rest; only read to send or resend an invite. Null once the seat is enrolled by an existing account.</summary>
+    public string? ContactCiphertext { get; private set; }
     public DateTime InvitedAt { get; private set; }
+    public DateTime? InviteSentAt { get; private set; }
+    public int InviteSendCount { get; private set; }
     public DateTime? EnrolledAt { get; private set; }
     public Guid? EnrolmentId { get; private set; }
     public Guid? LedgerEntryId { get; private set; }
@@ -215,7 +220,7 @@ public sealed class SeatAllocation : Entity
     public Guid? PayeeId { get; private set; }
     public Guid AllocatedBy { get; private set; }
 
-    public static SeatAllocation Invite(Guid tenantId, SeatBlock block, int seatNo, string displayName, string contactKind, string? phoneHash, string? email, string contactMasked, Guid allocatedBy, DateTime utcNow)
+    public static SeatAllocation Invite(Guid tenantId, SeatBlock block, int seatNo, string displayName, string contactKind, string? phoneHash, string? email, string contactMasked, Guid allocatedBy, DateTime utcNow, string? contactCiphertext = null)
     {
         var currency = block.PricePerSeat.Currency;
         return new SeatAllocation(NewId(), tenantId)
@@ -228,6 +233,7 @@ public sealed class SeatAllocation : Entity
             PhoneHash = phoneHash,
             Email = email,
             ContactMasked = contactMasked,
+            ContactCiphertext = contactCiphertext,
             InvitedAt = utcNow,
             Commission = Money.Zero(currency),
             TutorShare = Money.Zero(currency),
@@ -259,4 +265,13 @@ public sealed class SeatAllocation : Entity
     public void LinkEnrolment(Guid enrolmentId) => EnrolmentId = enrolmentId;
 
     public void LinkLedgerEntry(Guid ledgerEntryId) => LedgerEntryId = ledgerEntryId;
+
+    /// <summary>An invite message (SMS or email) went out for this seat.</summary>
+    public void RecordInviteSent(DateTime utcNow)
+    {
+        InviteSentAt = utcNow;
+        InviteSendCount++;
+    }
+
+    public bool CanBeInvited => Status == SeatAllocationStatus.Invited && ContactCiphertext is not null;
 }

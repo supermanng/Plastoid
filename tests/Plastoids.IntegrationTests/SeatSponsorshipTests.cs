@@ -173,6 +173,19 @@ public class SeatSponsorshipTests(PlastoidsApiFactory factory)
         invited.GetProperty("seatNo").GetInt32().Should().Be(2);
         invited.GetProperty("learnerId").ValueKind.Should().Be(JsonValueKind.Null);
         var invitedAllocationId = invited.GetProperty("allocationId").GetGuid();
+        // The invite went out by SMS with the sign-up link; it can be sent again while the seat waits.
+        invited.GetProperty("contactKind").GetString().Should().Be("phone");
+        invited.GetProperty("inviteSentAt").ValueKind.Should().Be(JsonValueKind.String);
+        invited.GetProperty("inviteSendCount").GetInt32().Should().Be(1);
+        Plastoids.Modules.Identity.Domain.PhoneNumber.TryNormalise(newPhone, out var newPhoneE164);
+        var inviteSms = factory.Services.GetRequiredService<Plastoids.Infrastructure.Sms.FakeSmsSender>().LastTo(newPhoneE164);
+        inviteSms.Should().NotBeNull();
+        inviteSms!.Message.Should().Contain("reserved you a seat").And.Contain("/auth/sign-in?mode=signup");
+        Key(owner);
+        var resent = await ReadAsync(await owner.PostAsync($"{blocks}/{blockId}/allocations/{invitedAllocationId}/resend-invite", null), HttpStatusCode.OK);
+        resent.GetProperty("inviteSendCount").GetInt32().Should().Be(2);
+        Key(learner);
+        (await learner.PostAsync($"{blocks}/{blockId}/allocations/{invitedAllocationId}/resend-invite", null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         var detailBefore = await owner.GetFromJsonAsync<JsonElement>($"{blocks}/{blockId}", Json);
         detailBefore.GetProperty("invited").GetInt32().Should().Be(1);
         detailBefore.GetProperty("enrolled").GetInt32().Should().Be(1);

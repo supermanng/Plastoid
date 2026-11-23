@@ -29,7 +29,9 @@ public record SeatBlockView(
     DateTime? ClosedAt);
 
 /// <summary>ADR 0021 <c>SeatAllocationView</c>: Contact is the masked phone ("+234803****01") or the email; the phone number itself is never stored.</summary>
-public sealed record SeatAllocationView(Guid AllocationId, Guid BlockId, int SeatNo, string Status, Guid? LearnerId, string DisplayName, string Contact, DateTime InvitedAt, DateTime? EnrolledAt, Guid? EnrolmentId);
+/// <summary>ContactKind "phone" | "email"; InviteSentAt / InviteSendCount say whether the invite message went out (invited seats only).</summary>
+public sealed record SeatAllocationView(Guid AllocationId, Guid BlockId, int SeatNo, string Status, Guid? LearnerId, string DisplayName, string Contact, DateTime InvitedAt, DateTime? EnrolledAt, Guid? EnrolmentId,
+    string ContactKind = "phone", DateTime? InviteSentAt = null, int InviteSendCount = 0);
 
 /// <summary>ADR 0021 <c>SeatBlockDetail</c>: the view's fields plus the allocations and the organisation's current unit balance.</summary>
 public sealed record SeatBlockDetail(
@@ -86,7 +88,7 @@ internal static class SeatViews
         block.Status.ToString().ToLowerInvariant(), block.PurchasedAt, block.ClosedAt);
 
     public static SeatAllocationView Allocation(SeatAllocation a)
-        => new(a.Id, a.BlockId, a.SeatNo, a.Status.ToString().ToLowerInvariant(), a.LearnerId, a.DisplayName, a.ContactMasked, a.InvitedAt, a.EnrolledAt, a.EnrolmentId);
+        => new(a.Id, a.BlockId, a.SeatNo, a.Status.ToString().ToLowerInvariant(), a.LearnerId, a.DisplayName, a.ContactMasked, a.InvitedAt, a.EnrolledAt, a.EnrolmentId, a.ContactKind, a.InviteSentAt, a.InviteSendCount);
 
     public static SeatBlockDetail Detail(SeatBlock block, IReadOnlyList<SeatAllocation> allocations, long walletBalance)
     {

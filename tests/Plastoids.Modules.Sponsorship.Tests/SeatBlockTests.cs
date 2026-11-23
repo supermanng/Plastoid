@@ -138,6 +138,26 @@ public class SeatBlockTests
     }
 
     [Fact]
+    public void Seat_invite_messages_name_the_sponsor_the_cohort_and_the_sign_up_link()
+    {
+        var block = Block();
+        var url = SeatInviteSender.SignUpUrl("https://app.plastoids.ng/");
+        url.Should().Be("https://app.plastoids.ng/auth/sign-in?mode=signup");
+        var sms = SeatInviteSender.SmsText(block, url);
+        sms.Should().Contain(block.SponsorName).And.Contain(block.CohortName).And.Contain(url).And.Contain("this phone number");
+        sms.Length.Should().BeLessThan(320, "two SMS segments at most");
+        SeatInviteSender.EmailSubject(block).Should().Contain(block.CohortName);
+        SeatInviteSender.EmailBody(block, url).Should().Contain(block.CourseTitle).And.Contain(url).And.Contain("this email address");
+
+        var allocation = SeatAllocation.Invite(Tenants.Marketplace, block, 1, "Bola", ContactKinds.Phone, "hash", null, "+234803****01", Guid.NewGuid(), Now, "cipher");
+        allocation.CanBeInvited.Should().BeTrue();
+        allocation.RecordInviteSent(Now);
+        allocation.RecordInviteSent(Now.AddHours(1));
+        allocation.InviteSendCount.Should().Be(2);
+        allocation.InviteSentAt.Should().Be(Now.AddHours(1));
+    }
+
+    [Fact]
     public void Entry_14_with_goodwill_units_has_no_wallet_line_and_expenses_the_block_to_revaluation()
     {
         // A staff adjustment credits zero-value lots (ADR 0018): nothing leaves 2050, the block is funded by a 4060 cost.

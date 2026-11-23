@@ -841,6 +841,11 @@ namespace Plastoids.Modules.Sponsorship.Persistence.Migrations
                         .HasColumnType("binary(16)")
                         .HasColumnName("block_id");
 
+                    b.Property<string>("ContactCiphertext")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)")
+                        .HasColumnName("contact_ciphertext");
+
                     b.Property<string>("ContactKind")
                         .IsRequired()
                         .HasMaxLength(8)
@@ -875,6 +880,14 @@ namespace Plastoids.Modules.Sponsorship.Persistence.Migrations
                     b.Property<Guid?>("EnrolmentId")
                         .HasColumnType("binary(16)")
                         .HasColumnName("enrolment_id");
+
+                    b.Property<int>("InviteSendCount")
+                        .HasColumnType("int")
+                        .HasColumnName("invite_send_count");
+
+                    b.Property<DateTime?>("InviteSentAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("invite_sent_at");
 
                     b.Property<DateTime>("InvitedAt")
                         .HasColumnType("datetime(6)")

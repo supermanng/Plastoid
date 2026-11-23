@@ -34,6 +34,8 @@ export const seatsApi = {
     api.post(`${base(orgId)}/${blockId}/allocations`, { phone: phone || null, email: email || null, displayName: displayName || null }),
   /** POST …/seat-blocks/{blockId}/release { seats } → SeatBlockView (OrganisationFinance). Units come back to the wallet pro rata. */
   release: (orgId, blockId, seats) => api.post(`${base(orgId)}/${blockId}/release`, { seats: Number(seats) }),
+  /** Sends the SMS or email invite again for a seat whose learner has not signed up yet → SeatAllocationView. */
+  resendInvite: (orgId, blockId, allocationId) => api.post(`${base(orgId)}/${blockId}/allocations/${allocationId}/resend-invite`, {}),
 };
 
 /** Human text for the seat-sponsorship error codes (falls back to the API message in ErrorAlert/toast). */

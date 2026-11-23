@@ -174,7 +174,7 @@ the organisation wallet, and gives each seat to a learner by phone or email.
   `seats × price` and posts entry 14 (Dr 2050 wallet / Cr 2020 held for the block). `POST …/{blockId}/allocations`
   `{phone | email, displayName}` enrols the learner at once (entry 15 splits the seat price into commission, tutor share
   and provider or tutor net, then `sponsorship.seat-allocated.v1` enrols them in the cohort, records earnings and
-  notifies them) or parks an **invite** that converts when that phone or email signs up. `POST …/{blockId}/release`
+  notifies them) or parks an **invite** (an SMS or email with the sign-up link, resendable) that converts when that phone or email signs up. `POST …/{blockId}/release`
   returns unallocated seats to the wallet (entry 16); a daily job does the same when the cohort ends.
 - The campaign, quote, invoice and application endpoints of Sprint 6 remain in the API but are no longer in the web
   app; the Sponsor module has Seats pages, the Learner module shows upcoming cohorts and "Sponsored by" on enrolled
