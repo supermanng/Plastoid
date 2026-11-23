@@ -22,8 +22,8 @@ const AdminUsers = lazy(() => import('./pages/Users'));
 const AdminUserDetail = lazy(() => import('./pages/UserDetail'));
 const AdminTutors = lazy(() => import('./pages/Tutors'));
 const AdminSponsors = lazy(() => import('./pages/Sponsors'));
-const AdminProgrammes = lazy(() => import('./pages/Programmes'));
-const AdminProgrammeDetail = lazy(() => import('./pages/ProgrammeDetail'));
+const AdminSeatBlocks = lazy(() => import('./pages/SeatBlocks'));
+const AdminSeatBlockDetail = lazy(() => import('./pages/SeatBlockDetail'));
 const AdminCatalogue = lazy(() => import('./pages/Catalogue'));
 const AdminFinance = lazy(() => import('./pages/Finance'));
 const AdminPayouts = lazy(() => import('./pages/Payouts'));
@@ -52,8 +52,8 @@ export default function App() {
           <Route path="users/:userId" element={<AdminUserDetail />} />
           <Route path="tutors" element={<AdminTutors />} />
           <Route path="sponsors" element={<AdminSponsors />} />
-          <Route path="programmes" element={<AdminProgrammes />} />
-          <Route path="programmes/:programmeId" element={<AdminProgrammeDetail />} />
+          <Route path="seat-blocks" element={<AdminSeatBlocks />} />
+          <Route path="seat-blocks/:blockId" element={<AdminSeatBlockDetail />} />
           <Route path="catalogue" element={<AdminCatalogue />} />
           <Route path="finance" element={<AdminFinance />} />
           <Route path="payouts" element={<AdminPayouts />} />

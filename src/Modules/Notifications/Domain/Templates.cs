@@ -100,6 +100,8 @@ public static class DefaultTemplates
         ["sponsorship.programme.reviewed"] = ("Programme review", "Plastoids reviewed your programme: {{decision}}. {{notes}}"),
         ["sponsorship.programme.funded"] = ("Programme funded", "{{name}} is funded: {{seats}} seats are unlocked."),
         ["sponsorship.programme.closed"] = ("Programme closed", "Your programme is closed. Refund of unfilled seats: {{refund}}; remaining funds {{remaining}} ({{policy}})."),
+        ["sponsorship.seat.allocated"] = ("You have a sponsored seat", "{{sponsorName}} has given you a seat in {{cohortName}} ({{courseTitle}}). It is in My courses."),
+        ["sponsorship.seat.invited"] = ("A seat is waiting for you", "{{sponsorName}} reserved a seat for you in {{cohortName}}. Sign up with this phone number or email to take it."),
         ["catalogue.engagement.offered"] = ("Teaching offer", "{{organisationName}} would like you to teach {{courseTitle}}. Review the terms in Offers."),
         ["catalogue.engagement.accepted"] = ("Tutor accepted", "Your teaching offer for {{courseTitle}} was accepted."),
         ["catalogue.engagement.declined"] = ("Tutor declined", "Your teaching offer for {{courseTitle}} was declined."),

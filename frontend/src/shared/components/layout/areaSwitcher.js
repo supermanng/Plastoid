@@ -12,14 +12,14 @@ const AREAS = [
 
 /**
  * Builds the Shell's `areaSwitcher` prop for the module's AppShell: one link per area the user has the role for
- * (the current area highlighted), plus "Become a tutor / Sponsor a programme" pointers for roles they lack.
+ * (the current area highlighted), plus "Become a tutor / Sponsor seats" pointers for roles they lack.
  */
 export function areaSwitcherFor(auth, current) {
   return {
     links: AREAS.filter((a) => auth.hasRole(a.role)).map((a) => ({ label: a.label, to: a.to, current: a.key === current })),
     suggestions: [
       !auth.hasRole(ROLES.tutor) && { label: 'Become a tutor', to: `${MODULES.learner}become-a-tutor`, icon: Sparkles },
-      !auth.hasRole(ROLES.sponsor) && { label: 'Sponsor a programme', to: `${MODULES.learner}for-sponsors`, icon: Briefcase },
+      !auth.hasRole(ROLES.sponsor) && { label: 'Sponsor seats', to: `${MODULES.learner}for-sponsors`, icon: Briefcase },
     ].filter(Boolean),
   };
 }

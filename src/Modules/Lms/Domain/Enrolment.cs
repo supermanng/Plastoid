@@ -30,6 +30,9 @@ public sealed class Enrolment : Entity
     public string FundingSource { get; private set; } = string.Empty;
     public Guid? FundingSourceId { get; private set; }
 
+    /// <summary>Who paid, as the learner sees it (ADR 0021: "Sponsored by Lagos Data School"); null for self-funded study.</summary>
+    public string? FundingLabel { get; private set; }
+
     /// <summary>Idempotency key for enrolment creation: the payment intent or application that produced it.</summary>
     public string SourceKey { get; private set; } = string.Empty;
 
@@ -42,7 +45,7 @@ public sealed class Enrolment : Entity
     public DateTime ExpiresAt { get; private set; }
     public decimal? FinalScore { get; private set; }
 
-    public static Enrolment Create(Guid tenantId, Guid learnerId, Guid courseId, Guid offeringId, Guid? cohortId, int versionNo, string fundingSource, Guid? fundingSourceId, string sourceKey, int requiredLessons, DateTime utcNow, DateTime expiresAt)
+    public static Enrolment Create(Guid tenantId, Guid learnerId, Guid courseId, Guid offeringId, Guid? cohortId, int versionNo, string fundingSource, Guid? fundingSourceId, string sourceKey, int requiredLessons, DateTime utcNow, DateTime expiresAt, string? fundingLabel = null)
         => new(NewId(), tenantId)
         {
             LearnerId = learnerId,
@@ -52,6 +55,7 @@ public sealed class Enrolment : Entity
             VersionNo = versionNo,
             FundingSource = fundingSource,
             FundingSourceId = fundingSourceId,
+            FundingLabel = string.IsNullOrWhiteSpace(fundingLabel) ? null : fundingLabel.Trim(),
             SourceKey = sourceKey,
             Status = EnrolmentStatus.Active,
             RequiredLessons = requiredLessons,

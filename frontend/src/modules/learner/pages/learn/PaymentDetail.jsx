@@ -11,7 +11,7 @@ export default function PaymentDetail() {
   const query = useQuery({ queryKey: keys.payment(paymentIntentId), queryFn: () => payments.intent(paymentIntentId) });
   const receipt = useQuery({ queryKey: keys.receipt(paymentIntentId), queryFn: () => payments.receipt(paymentIntentId), enabled: query.data?.status === 'succeeded', retry: false });
   const verify = useAction(() => payments.verify(paymentIntentId), {
-    invalidate: [keys.payment(paymentIntentId), ['payments'], ['bookings'], keys.enrolments, keys.applications],
+    invalidate: [keys.payment(paymentIntentId), ['payments'], ['bookings'], keys.enrolments],
     success: (r) => (r.status === 'succeeded' ? 'Payment confirmed' : `Gateway says: ${r.gatewayStatus}`),
   });
 
@@ -67,7 +67,6 @@ export default function PaymentDetail() {
       <div className="mt-6 flex flex-wrap gap-2 text-sm">
         {p.purpose === 'booking' || p.purpose === 'package' ? <Link to="/learn/bookings" className="font-semibold">Go to tutor sessions</Link> : null}
         {p.purpose === 'course' || p.purpose === 'enrolment' ? <Link to="/learn/courses" className="font-semibold">Go to my courses</Link> : null}
-        {/co_?pay/i.test(p.purpose) ? <Link to="/learn/applications" className="font-semibold">Go to applications</Link> : null}
       </div>
     </div>
   );

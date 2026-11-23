@@ -27,8 +27,8 @@ export const adminKeys = {
   payoutBatch: (id) => ['admin', 'payouts', 'batch', id],
   roleGrants: (status) => ['admin', 'role-grants', status ?? null],
   templates: (key) => ['admin', 'templates', key ?? null],
-  reviewQueue: (programmeId, params) => ['admin', 'applications', programmeId, params],
-  opportunities: ['admin', 'opportunities'],
+  seatBlocks: (status) => ['admin', 'seat-blocks', status ?? null],
+  seatBlock: (blockId) => ['admin', 'seat-blocks', blockId],
   course: (slug) => ['catalogue', 'course', slug],
   verify: (code) => ['verify', code],
 };
@@ -61,19 +61,11 @@ export const adminApi = {
   listTutors: (status, limit = 100) => api.get('/admin/backoffice/tutors', { status, limit }),
   listSponsors: (verificationStatus, limit = 100) => api.get('/admin/backoffice/sponsors', { verificationStatus, limit }),
 
-  // Programmes (staff side) — there is no staff list/read of programmes; published ones come from the public listing.
-  publishedOpportunities: (limit = 100) => api.get('/sponsorship/opportunities', { limit }),
-  reviewProgramme: (programmeId, body) => api.post(`/admin/sponsorship/programmes/${programmeId}/review`, body),
-  publishProgramme: (programmeId) => api.post(`/admin/sponsorship/programmes/${programmeId}/publish`, {}),
-  closeProgramme: (programmeId) => api.post(`/admin/sponsorship/programmes/${programmeId}/close`, {}),
-  releaseSeat: (programmeId, seatId, reason) => api.post(`/admin/sponsorship/programmes/${programmeId}/seats/${seatId}/release`, { reason }),
-
-  // Applications review
-  reviewQueue: (programmeId, { status, blind, cursor, limit = 50 } = {}) => api.get(`/admin/applications/programmes/${programmeId}/queue`, { status, blind, cursor, limit }),
-  scoreApplication: (applicationId, scores) => api.post(`/admin/applications/${applicationId}/score`, { scores }),
-  bulkDecide: (programmeId, decisions) => api.post(`/admin/applications/programmes/${programmeId}/decisions`, { decisions }),
-  sendOffers: (programmeId) => api.post(`/admin/applications/programmes/${programmeId}/offers`, {}),
-  resolveAppeal: (appealId, decision, reason) => api.post(`/admin/applications/appeals/${appealId}/resolve`, { decision, reason }),
+  // Seat sponsorship oversight (ADR 0021), read-only
+  /** GET /admin/sponsorship/seat-blocks?status=&limit= → SeatBlockView[] across every organisation */
+  seatBlocks: (status, limit = 100) => api.get('/admin/sponsorship/seat-blocks', { status: status || undefined, limit }),
+  /** GET /admin/sponsorship/seat-blocks/{blockId} → SeatBlockDetail (block + allocations) */
+  seatBlock: (blockId) => api.get(`/admin/sponsorship/seat-blocks/${blockId}`),
 
   // Catalogue preview (public read)
   course: (slug) => api.get(`/catalogue/courses/${encodeURIComponent(slug)}`),

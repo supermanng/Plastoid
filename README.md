@@ -163,6 +163,23 @@ units sale go back to the wallet; sponsors can settle a programme invoice from t
 `POST …/programmes/{id}/fund-from-wallet`. Units are never paid out as cash. Tests: `Plastoids.Modules.Wallet.Tests`,
 `UnitPostingsTests` and `IntegrationTests/WalletTests.cs`.
 
+## Seat sponsorship (ADR 0021)
+
+Learners do not search for sponsors. A sponsor picks a **cohort** (a dated run of a course), buys a block of seats from
+the organisation wallet, and gives each seat to a learner by phone or email.
+
+- `GET /lms/cohorts?courseId=` and `GET /lms/cohorts/{id}` list upcoming cohorts with dates, seats left and the price
+  per seat; a cohort tracks `reserved` seats held by sponsors.
+- `POST /sponsorship/organisations/{organisationId}/seat-blocks` `{cohortId, seats}` redeems units for
+  `seats × price` and posts entry 14 (Dr 2050 wallet / Cr 2020 held for the block). `POST …/{blockId}/allocations`
+  `{phone | email, displayName}` enrols the learner at once (entry 15 splits the seat price into commission, tutor share
+  and provider or tutor net, then `sponsorship.seat-allocated.v1` enrols them in the cohort, records earnings and
+  notifies them) or parks an **invite** that converts when that phone or email signs up. `POST …/{blockId}/release`
+  returns unallocated seats to the wallet (entry 16); a daily job does the same when the cohort ends.
+- The campaign, quote, invoice and application endpoints of Sprint 6 remain in the API but are no longer in the web
+  app; the Sponsor module has Seats pages, the Learner module shows upcoming cohorts and "Sponsored by" on enrolled
+  courses, and the Administration module lists seat blocks.
+
 ## Organisation-owned courses (ADR 0019)
 
 Any verified organisation (a sponsor, employer, institution, hub or the new `provider` type) can own courses and engage

@@ -29,7 +29,7 @@ export function OrganisationSwitcher({ org }) {
 export function NoOrganisation() {
   return (
     <Alert tone="info" title="No organisation yet">
-      Register your organisation (CAC number and authorised signatory) to start sponsoring.
+      Register your organisation (CAC number and authorised signatory) to buy seats for learners.
       <div className="mt-3">
         <Button to="/organisation/new" size="sm">Register organisation</Button>
       </div>
@@ -37,15 +37,15 @@ export function NoOrganisation() {
   );
 }
 
-/** Verification banner: staff must verify the organisation before campaigns can be created. */
+/** Verification banner: Plastoids staff verify the organisation's CAC details after registration. */
 export function VerificationBanner({ org }) {
   if (!org.organisation || org.verified) return null;
   const status = String(org.verificationStatus || '').toLowerCase();
   return (
     <Alert tone={status === 'rejected' ? 'danger' : 'warn'} title={status === 'rejected' ? 'Organisation verification was rejected' : 'Organisation verification pending'}>
       {status === 'rejected'
-        ? 'Contact Plastoids support to resubmit your CAC details. Campaigns cannot be created until the organisation is verified.'
-        : 'Plastoids staff are checking your CAC number and authorised signatory. You can explore the sponsor area, but campaigns can only be created once verified.'}
+        ? 'Contact Plastoids support to resubmit your CAC details.'
+        : 'Plastoids staff are checking your CAC number and authorised signatory. You can buy units and seats in the meantime; learners see your organisation name on the seats you give them.'}
     </Alert>
   );
 }

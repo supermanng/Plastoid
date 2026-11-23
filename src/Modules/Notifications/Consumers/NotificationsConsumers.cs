@@ -7,6 +7,7 @@ using Plastoids.Modules.Identity.Contracts;
 using Plastoids.Modules.Lms.Contracts;
 using Plastoids.Modules.Notifications.Services;
 using Plastoids.Modules.Payouts.Contracts;
+using Plastoids.Modules.Sponsorship.Contracts;
 using Plastoids.SharedKernel.Messaging;
 
 namespace Plastoids.Modules.Notifications.Consumers;
@@ -66,4 +67,11 @@ internal sealed class EnrolmentCreatedConsumer(NotificationDispatcher dispatcher
 {
     public Task HandleAsync(EnrolmentCreated @event, IntegrationEventEnvelope envelope, CancellationToken cancellationToken)
         => dispatcher.DispatchAsync(@event.LearnerId, "lms.enrolment.created", new Dictionary<string, string> { ["enrolmentId"] = @event.EnrolmentId.ToString("D") }, "preferred", envelope.Id, cancellationToken);
+}
+
+/// <summary>sponsorship.seat-allocated.v1 (ADR 0021): the learner hears who sponsored their seat and in which cohort.</summary>
+internal sealed class SeatAllocatedConsumer(NotificationDispatcher dispatcher) : IIntegrationEventHandler<SeatAllocated>
+{
+    public Task HandleAsync(SeatAllocated @event, IntegrationEventEnvelope envelope, CancellationToken cancellationToken)
+        => dispatcher.DispatchAsync(@event.LearnerId, "sponsorship.seat.allocated", new Dictionary<string, string> { ["allocationId"] = @event.AllocationId.ToString("D"), ["sponsorName"] = @event.SponsorName, ["cohortName"] = @event.CohortName, ["courseTitle"] = @event.CourseTitle }, "preferred", envelope.Id, cancellationToken);
 }

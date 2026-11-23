@@ -23,6 +23,21 @@ public class NotificationRulesTests
     }
 
     [Fact]
+    public void Sponsored_seat_templates_render_the_sponsor_and_cohort()
+    {
+        var data = new Dictionary<string, string> { ["sponsorName"] = "Lagos Data School", ["cohortName"] = "Jan intake", ["courseTitle"] = "SQL for Analysts" };
+        var (subject, body) = DefaultTemplates.For("sponsorship.seat.allocated");
+        var allocated = TemplateRenderer.Render(subject, body, data);
+        allocated.Subject.Should().Be("You have a sponsored seat");
+        allocated.Body.Should().Be("Lagos Data School has given you a seat in Jan intake (SQL for Analysts). It is in My courses.");
+
+        var (invitedSubject, invitedBody) = DefaultTemplates.For("sponsorship.seat.invited");
+        var invited = TemplateRenderer.Render(invitedSubject, invitedBody, data);
+        invited.Subject.Should().Be("A seat is waiting for you");
+        invited.Body.Should().Be("Lagos Data School reserved a seat for you in Jan intake. Sign up with this phone number or email to take it.");
+    }
+
+    [Fact]
     public void Every_template_key_the_modules_emit_has_copy()
     {
         string[] emitted =
@@ -31,6 +46,7 @@ public class NotificationRulesTests
             "applications.offer.sent", "applications.offer.accepted", "applications.offer.expired", "booking.confirmed.learner", "booking.confirmed.tutor", "booking.cancelled.learner", "booking.cancelled.tutor",
             "booking.rescheduled.learner", "booking.rescheduled.tutor", "certificates.issued", "lms.assignment.graded", "lms.enrolment.completed", "lms.enrolment.created", "payouts.hold.placed", "payouts.hold.released",
             "payouts.payout.failed", "payouts.payout.reversed", "payouts.payout.settled", "sponsorship.programme.closed", "sponsorship.programme.funded", "sponsorship.programme.reviewed", "sponsorship.quote.approved",
+            "sponsorship.seat.allocated", "sponsorship.seat.invited",
         ];
         emitted.Should().AllSatisfy(k => DefaultTemplates.All.Should().ContainKey(k));
     }

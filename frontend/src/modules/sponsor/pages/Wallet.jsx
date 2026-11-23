@@ -12,7 +12,7 @@ export default function SponsorWallet() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Organisation wallet" description="Units fund programmes: approve a quote, then pay the invoice from the wallet instead of by transfer." actions={<OrganisationSwitcher org={org} />} />
+      <PageHeader title="Organisation wallet" description="Units pay for seats: buy units here, then buy seats in a cohort from the Seats page. Released seats refund units." actions={<OrganisationSwitcher org={org} />} />
       {q.isPending ? <Loading /> : q.isError ? <ErrorAlert error={q.error} /> : (
         <>
           <BalanceHero wallet={q.data} title={`${org.organisation.name} units`} />

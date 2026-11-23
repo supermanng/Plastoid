@@ -23,6 +23,7 @@ using Plastoids.Modules.Notifications.Jobs;
 using Plastoids.Modules.Notifications.Persistence;
 using Plastoids.Modules.Notifications.Services;
 using Plastoids.Modules.Payouts.Contracts;
+using Plastoids.Modules.Sponsorship.Contracts;
 using Quartz;
 
 namespace Plastoids.Modules.Notifications;
@@ -74,5 +75,6 @@ public sealed class NotificationsModule : IModule
         ConsumerRegistry.For<CertificateIssued, CertificateIssuedConsumer, NotificationsDbContext>(Name),
         ConsumerRegistry.For<PayoutSettled, PayoutSettledConsumer, NotificationsDbContext>(Name),
         ConsumerRegistry.For<EnrolmentCreated, EnrolmentCreatedConsumer, NotificationsDbContext>(Name),
+        ConsumerRegistry.For<SeatAllocated, SeatAllocatedConsumer, NotificationsDbContext>(Name),
     ];
 }

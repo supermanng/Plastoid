@@ -47,6 +47,7 @@ public sealed class IdentityModule : IModule
     [
         new(EnvelopeSerializer.GetAttribute(typeof(SmokeTestRequested)).Topic),
         new(EnvelopeSerializer.GetAttribute(typeof(UserRegistered)).Topic),
+        new(EnvelopeSerializer.GetAttribute(typeof(EmailLinked)).Topic),
         new(EnvelopeSerializer.GetAttribute(typeof(OrganisationVerified)).Topic),
     ];
 

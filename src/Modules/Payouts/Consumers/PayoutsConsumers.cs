@@ -83,6 +83,21 @@ internal sealed class RefundIssuedConsumer(PayoutsDbContext db) : IIntegrationEv
     }
 }
 
+/// <summary>sponsorship.seat-allocated.v1 (ADR 0021): a sponsored seat earns like a course sale (7-day hold); idempotent on the allocation's source keys.</summary>
+internal sealed class SeatAllocatedConsumer(PayoutsDbContext db, IOptions<PayoutOptions> options, IClock clock) : IIntegrationEventHandler<SeatAllocated>
+{
+    public async Task HandleAsync(SeatAllocated @event, IntegrationEventEnvelope envelope, CancellationToken cancellationToken)
+    {
+        var earnings = SeatEarnings.Build(envelope.TenantId, @event, clock.UtcNow, options.Value.CourseSaleHoldDays);
+        var keys = earnings.Select(e => e.SourceKey).ToList();
+        var existing = await db.Earnings.Where(e => keys.Contains(e.SourceKey)).Select(e => e.SourceKey).ToListAsync(cancellationToken);
+        foreach (var earning in earnings.Where(e => !existing.Contains(e.SourceKey, StringComparer.Ordinal)))
+        {
+            db.Earnings.Add(earning);
+        }
+    }
+}
+
 /// <summary>sponsorship.tutor-earnings-accrued.v1: a delivered programme month; payable at once (bi-weekly run in arrears).</summary>
 internal sealed class TutorEarningsAccruedConsumer(PayoutsDbContext db, IClock clock) : IIntegrationEventHandler<TutorEarningsAccrued>
 {

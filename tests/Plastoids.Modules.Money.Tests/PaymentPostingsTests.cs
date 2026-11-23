@@ -365,6 +365,18 @@ public class UnitPostingsTests
     }
 
     [Fact]
+    public void Entry12_with_goodwill_units_releases_nothing_and_expenses_the_price_to_revaluation()
+    {
+        // Units from a staff adjustment carry no naira (ADR 0018): no 2050 line at all, the whole price is a revaluation cost.
+        var d = PaymentPostings.Entry12UnitRedemption(UnitsSale(0), Now);
+        LedgerService.Validate(d).IsSuccess.Should().BeTrue();
+        d.Postings.Should().NotContain(p => p.AccountCode == AccountCodes.UnitBalancesHeld);
+        Dr(d, AccountCodes.UnitRevaluation).Should().Be(4_500_000);
+        Cr(d, AccountCodes.TutorPayable).Should().Be(3_600_000);
+        Cr(d, AccountCodes.CourseCommission).Should().Be(900_000);
+    }
+
+    [Fact]
     public void Entry12_books_a_revaluation_gain_when_units_were_bought_dearer()
     {
         var d = PaymentPostings.Entry12UnitRedemption(UnitsSale(4_600_000), Now);

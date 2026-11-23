@@ -6,7 +6,7 @@ import { Loading } from '../../shared/components/ui';
 
 /*
  * Sponsor module (ADR 0020): the organisation portal (sponsors and providers), router at basename `/sponsor`.
- * Routes are relative to that base (`/sponsor/programmes` is `programmes` here). The shared sign-in, MFA and
+ * Routes are relative to that base (`/sponsor/seats` is `seats` here). The shared sign-in, MFA and
  * no-access pages are mounted under `auth/` so RequireAuth can redirect inside this module.
  */
 
@@ -20,12 +20,10 @@ const NotFound = lazy(() => import('../../shared/pages/NotFound'));
 const SponsorDashboard = lazy(() => import('./pages/Dashboard'));
 const SponsorOrganisation = lazy(() => import('./pages/Organisation'));
 const RegisterOrganisation = lazy(() => import('./pages/RegisterOrganisation'));
-const SponsorProgrammes = lazy(() => import('./pages/Programmes'));
-const CampaignBuilder = lazy(() => import('./pages/CampaignBuilder'));
-const ProgrammeDetail = lazy(() => import('./pages/ProgrammeDetail'));
-const SponsorInvoices = lazy(() => import('./pages/Invoices'));
+const SponsorSeats = lazy(() => import('./pages/Seats'));
+const BuySeats = lazy(() => import('./pages/BuySeats'));
+const SeatBlock = lazy(() => import('./pages/SeatBlock'));
 const SponsorWallet = lazy(() => import('./pages/Wallet'));
-const InvoiceDetail = lazy(() => import('./pages/InvoiceDetail'));
 const SponsorCourses = lazy(() => import('./pages/Courses'));
 const SponsorCourseEditor = lazy(() => import('./pages/CourseEditor'));
 const SponsorCourseTutors = lazy(() => import('./pages/CourseTutors'));
@@ -47,13 +45,10 @@ export default function App() {
         <Route element={<RequireAuth role={ROLES.sponsor} mfa><AppShell /></RequireAuth>}>
           <Route index element={<SponsorDashboard />} />
           <Route path="organisation" element={<SponsorOrganisation />} />
-          <Route path="programmes" element={<SponsorProgrammes />} />
-          <Route path="programmes/new" element={<CampaignBuilder />} />
-          <Route path="programmes/:programmeId" element={<ProgrammeDetail />} />
-          <Route path="programmes/:programmeId/edit" element={<CampaignBuilder />} />
-          <Route path="invoices" element={<SponsorInvoices />} />
+          <Route path="seats" element={<SponsorSeats />} />
+          <Route path="seats/new" element={<BuySeats />} />
+          <Route path="seats/:blockId" element={<SeatBlock />} />
           <Route path="wallet" element={<SponsorWallet />} />
-          <Route path="invoices/:invoiceId" element={<InvoiceDetail />} />
           <Route path="courses" element={<SponsorCourses />} />
           <Route path="courses/new" element={<SponsorCourseEditor />} />
           <Route path="courses/:courseId" element={<SponsorCourseEditor />} />

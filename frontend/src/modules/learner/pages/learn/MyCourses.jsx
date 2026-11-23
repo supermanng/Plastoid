@@ -7,6 +7,7 @@ import { useAction } from '../../../../shared/lib/hooks';
 import { formatDate, formatDateTime } from '../../../../shared/lib/format';
 import { keys, lms } from '../../api/learn';
 import { titleFromSlug } from './Dashboard';
+import { SponsoredChip } from './SponsoredChip';
 
 /** GET /lms/enrolments/me → cards with progress; complete, gradebook and offline package per enrolment. */
 export default function MyCourses() {
@@ -38,7 +39,7 @@ export default function MyCourses() {
         <EmptyState
           icon={tab === 'completed' ? Award : BookOpen}
           title={tab === 'active' ? 'No active courses' : `No ${tab} courses`}
-          description={tab === 'active' ? 'Enrol in a course or accept a sponsored offer to start learning.' : undefined}
+          description={tab === 'active' ? 'Enrol in a course to start learning. A seat a sponsor gives you appears here on its own.' : undefined}
           action={tab === 'active' ? <Button to="/courses" size="sm">Browse courses</Button> : null}
         />
       ) : null}
@@ -64,6 +65,7 @@ function EnrolmentCard({ e, onGradebook, onOffline }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-base font-bold text-navy">{e.courseSlug ? titleFromSlug(e.courseSlug) : 'Course'}</h3>
+          <SponsoredChip enrolment={e} className="mt-1" />
           <div className="mt-0.5 text-xs text-muted">
             {e.fundingSource === 'sponsored' ? 'Sponsored seat' : e.fundingSource === 'paid' ? 'Paid' : e.fundingSource} · v{e.versionNo} · started {formatDate(e.startedAt)}
             {e.cohortId ? ' · cohort' : ''}

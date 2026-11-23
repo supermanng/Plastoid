@@ -1,6 +1,6 @@
 /*
- * Query functions for the public discovery pages (courses, opportunities, tutors) and the
- * learner-side actions those pages trigger (checkout, eligibility, bookings).
+ * Query functions for the public discovery pages (courses, cohorts, tutors) and the
+ * learner-side actions those pages trigger (checkout, bookings).
  * Shapes come from the C# records; see each comment.
  */
 import { api } from '../lib/api';
@@ -11,8 +11,8 @@ export const queryKeys = {
   courses: (filters) => ['public', 'courses', filters],
   course: (slug) => ['public', 'course', slug],
   compare: (ids) => ['public', 'compare', ids],
-  opportunities: (cursor) => ['public', 'opportunities', cursor ?? null],
-  opportunity: (programmeId) => ['public', 'opportunity', programmeId],
+  cohorts: (filters) => ['public', 'cohorts', filters ?? null],
+  cohort: (cohortId) => ['public', 'cohort', cohortId],
   tutors: (filters) => ['public', 'tutors', filters],
   tutor: (tutorId) => ['public', 'tutor', tutorId],
   availability: (tutorId, days) => ['public', 'availability', tutorId, days],
@@ -52,33 +52,25 @@ export function createCourseCheckout(quoteId, learnerSource, payWithUnits = fals
   return api.post('/payments/intents', { purpose: 'course', quoteId, learnerSource: learnerSource ?? null, payWithUnits: Boolean(payWithUnits) });
 }
 
-/* ---- Sponsorship -------------------------------------------------------- */
-
-/** GET /sponsorship/opportunities → Page<OpportunityView> { items, nextCursor } */
-export function listOpportunities(cursor, limit = 12) {
-  return api.get('/sponsorship/opportunities', { cursor, limit }, anon);
-}
-
-/** Walks the public list until the programme is found (no single-programme public endpoint exists). */
-export async function findOpportunity(programmeId, maxPages = 20) {
-  let cursor = null;
-  for (let i = 0; i < maxPages; i += 1) {
-    const page = await listOpportunities(cursor, 50);
-    const hit = (page?.items || []).find((o) => o.programmeId === programmeId);
-    if (hit) return hit;
-    cursor = page?.nextCursor;
-    if (!cursor) break;
-  }
-  return null;
-}
+/* ---- Cohorts (ADR 0021) ---------------------------------------------- */
 
 /**
- * POST /sponsorship/opportunities/{programmeId}/eligibility (signed in)
- * body: ApplicantFacts { countryOfResidence, stateOfResidence, educationLevel, employmentStatus }
- * → EligibilityView { programmeId, eligible, reasons[], alternatives[{ programmeId, name, sponsorName, applicationsCloseAt }], evaluationMs }
+ * GET /lms/cohorts?courseId=&from=&limit= → CohortListing[] (upcoming, endsAt ≥ now, ordered by startsAt)
+ * CohortListing { cohortId, courseId, courseSlug, courseTitle, offeringId, name, startsAt, endsAt, capacity, enrolled,
+ *                 reserved, seatsLeft, pricePerSeat: Money, tutorUserId, ownerType, providerName? }
  */
-export function checkEligibility(programmeId, facts) {
-  return api.post(`/sponsorship/opportunities/${programmeId}/eligibility`, facts);
+export function listCohorts({ courseId, from, limit } = {}) {
+  return api.get('/lms/cohorts', { courseId, from, limit }, anon);
+}
+
+/** GET /lms/cohorts/{cohortId} → CohortListing */
+export function getCohort(cohortId) {
+  return api.get(`/lms/cohorts/${cohortId}`, undefined, anon);
+}
+
+/** Lists come back as a bare array per the ADR; tolerate a paged `{ items }` wrapper too. */
+export function cohortItems(data) {
+  return Array.isArray(data) ? data : data?.items || [];
 }
 
 /* ---- Tutors ------------------------------------------------------------- */
@@ -164,62 +156,4 @@ export const LANGUAGES = [
   ['ig', 'Igbo'],
   ['ha', 'Hausa'],
   ['pcm', 'Pidgin'],
-];
-
-/** Human text for an eligibility rule key (EligibilityEngine.AllowedKeys). */
-export function describeRule(key, value) {
-  const list = (v) => (Array.isArray(v) ? v.join(', ') : String(v));
-  switch (key) {
-    case 'minAge':
-      return `Aged ${value} or older`;
-    case 'maxAge':
-      return `Aged ${value} or younger`;
-    case 'residency':
-      return `Resident in ${list(value).replace(/\bNG\b/, 'Nigeria')}`;
-    case 'states':
-      return `Living in: ${list(value)}`;
-    case 'education':
-      return `Education: ${list(value).replace(/_/g, ' ')}`;
-    case 'employmentStatus':
-      return `Employment status: ${list(value).replace(/_/g, ' ')}`;
-    case 'notPreviouslySponsored':
-      return value ? 'Not previously sponsored on Plastoids' : null;
-    default:
-      return `${key}: ${list(value)}`;
-  }
-}
-
-/** Human text for an eligibility reason code returned by the engine. */
-export function describeReason(code) {
-  if (/^under_min_age_(\d+)/.test(code)) return `You must be at least ${code.match(/\d+/)[0]} years old.`;
-  if (/^over_max_age_(\d+)/.test(code)) return `This programme is for people aged ${code.match(/\d+/)[0]} or younger.`;
-  return {
-    age_unknown: 'We could not confirm your age; add your date of birth to your profile.',
-    residency_not_eligible: 'Your country of residence is not covered.',
-    state_not_eligible: 'Your state of residence is not covered.',
-    education_not_eligible: 'Your education level does not match the rules.',
-    employment_status_not_eligible: 'Your employment status does not match the rules.',
-    previously_sponsored: 'This programme is for people who have not been sponsored on Plastoids before.',
-  }[code] || code.replace(/_/g, ' ');
-}
-
-export const NIGERIAN_STATES = [
-  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu',
-  'FCT', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun',
-  'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara',
-];
-export const EDUCATION_LEVELS = [
-  ['none', 'No formal education'],
-  ['primary', 'Primary'],
-  ['secondary', 'Secondary (SSCE)'],
-  ['nd', 'ND / NCE'],
-  ['hnd', 'HND'],
-  ['bachelors', "Bachelor's degree"],
-  ['masters', "Master's degree or higher"],
-];
-export const EMPLOYMENT_STATUSES = [
-  ['unemployed', 'Unemployed'],
-  ['student', 'Student'],
-  ['employed', 'Employed'],
-  ['self_employed', 'Self-employed'],
 ];

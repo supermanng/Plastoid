@@ -402,6 +402,10 @@ namespace Plastoids.Modules.Lms.Persistence.Migrations
                         .HasColumnType("binary(16)")
                         .HasColumnName("programme_id");
 
+                    b.Property<int>("Reserved")
+                        .HasColumnType("int")
+                        .HasColumnName("reserved");
+
                     b.Property<ulong>("RowVersion")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint unsigned")
@@ -473,6 +477,11 @@ namespace Plastoids.Modules.Lms.Persistence.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)")
                         .HasColumnName("final_score");
+
+                    b.Property<string>("FundingLabel")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("funding_label");
 
                     b.Property<string>("FundingSource")
                         .IsRequired()

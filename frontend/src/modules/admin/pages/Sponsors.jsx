@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Briefcase } from 'lucide-react';
 import { Card, EmptyState, Field, Loading, PageHeader, Select } from '../../../shared/components/ui';
@@ -10,7 +11,7 @@ import { OrganisationTable } from './Queues';
 const DEFAULTS = { status: '', limit: '100' };
 const STATUSES = ['', 'pending', 'verified', 'rejected'];
 
-/** GET /admin/backoffice/sponsors?verificationStatus=&limit= → OrganisationAdminSummary[] (no programmes in this view). */
+/** GET /admin/backoffice/sponsors?verificationStatus=&limit= → OrganisationAdminSummary[]. Seat blocks per sponsor live under Seat blocks. */
 export default function Sponsors() {
   const [params, setParam] = useQueryParams(DEFAULTS);
   const limit = Number(params.limit) || 100;
@@ -24,7 +25,7 @@ export default function Sponsors() {
 
   return (
     <div>
-      <PageHeader title="Sponsors" description="Organisations that registered to sponsor seats. Verification checks the CAC number and the authorised signatory; only verified organisations can start a campaign." />
+      <PageHeader title="Sponsors" description="Organisations that registered to sponsor seats. Verification checks the CAC number and the authorised signatory." />
       <Card className="mb-6">
         <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
           <Field label="Verification status">
@@ -42,7 +43,7 @@ export default function Sponsors() {
           <EmptyState icon={Briefcase} title="No organisations" description="Sponsors register from the public 'Sponsor' page." />
         )
       ) : null}
-      <p className="mt-3 text-xs text-muted">Programmes per sponsor are not exposed to staff by the API yet; open a programme by id from Programmes.</p>
+      <p className="mt-3 text-xs text-muted">The seats each organisation has bought are listed under <Link to="/seat-blocks" className="font-semibold text-royal">Seat blocks</Link>.</p>
       <DecisionDialog
         open={Boolean(row)}
         onClose={() => setRow(null)}

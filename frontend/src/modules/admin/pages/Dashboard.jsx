@@ -31,7 +31,7 @@ export default function Dashboard() {
     <div>
       <PageHeader
         title="Back office"
-        description="GMV, revenue, participants, programme health, the payout queue and open risk alerts."
+        description="GMV, revenue, participants, enrolments, the payout queue and open risk alerts."
         actions={
           <>
             <Freshness at={d.generatedAt} />
@@ -120,8 +120,8 @@ export default function Dashboard() {
           )}
         </Card>
         <Card>
-          <CardHeader title="Programme health" action={<Link to="/programmes" className="text-sm font-semibold text-royal">Programmes <ArrowRight className="inline h-4 w-4" /></Link>} />
-          <KeyValue cols={1} items={[['Funded', num(prog.funded)], ['Published', num(prog.published)], ['Enrolments created', num(prog.enrolmentsCreated)], ['Enrolments completed', num(prog.enrolmentsCompleted)]]} />
+          <CardHeader title="Enrolments" action={<Link to="/seat-blocks" className="text-sm font-semibold text-royal">Seat blocks <ArrowRight className="inline h-4 w-4" /></Link>} />
+          <KeyValue cols={1} items={[['Enrolments created', num(prog.enrolmentsCreated)], ['Enrolments completed', num(prog.enrolmentsCompleted)], ['Completion rate', formatPercent(prog.completionRatePercent)]]} />
           {d.metrics?.length ? (
             <>
               <h4 className="mt-5 text-xs font-semibold uppercase tracking-wide text-muted">Event counters</h4>

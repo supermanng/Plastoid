@@ -7,7 +7,6 @@
  *   PurchaseUnitsResponse { purchaseId, walletId, paymentIntentId, units, rateKobo, amount, checkoutUrl, status }
  *   UnitRatesView         { effectiveRateKobo, effectiveRateValue, effectiveSource, rates[UnitRateVersionView] }
  *   UnitRateVersionView   { rateId, rateKobo, rateValue, version, effectiveFrom, status, rationale, proposedBy, proposedAt, decidedBy, decidedAt, decisionNote }
- *   FundFromWalletResponse{ programmeId, invoiceId, invoiceStatus, unitsRedeemed, unitRateKobo, amountApplied, outstanding, walletBalanceAfter }
  */
 import { api } from '../lib/api';
 
@@ -28,9 +27,6 @@ export const walletApi = {
   organisationTransactions: (orgId, cursor, limit = 50) => api.get(`/wallet/organisations/${orgId}/transactions`, { cursor, limit }),
   /** POST /wallet/purchases { units, organisationId? } → hosted checkout; units land after the gateway confirms. */
   purchase: (units, organisationId) => api.post('/wallet/purchases', { units: Number(units), organisationId: organisationId ?? null }),
-
-  /** Sponsor: pay the programme invoice from the organisation wallet. */
-  fundProgramme: (orgId, programmeId) => api.post(`/sponsorship/organisations/${orgId}/programmes/${programmeId}/fund-from-wallet`, {}),
 
   // Staff
   rates: () => api.get('/admin/wallet/rates'),

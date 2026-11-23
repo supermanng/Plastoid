@@ -1,5 +1,5 @@
 import {
-  Award, BookOpen, CalendarDays, ClipboardList, Coins, Compass, CreditCard, Handshake, Home, MessageSquare, User, Users, Wallet,
+  Award, BookOpen, CalendarDays, Coins, Compass, CreditCard, Handshake, Home, MessageSquare, User, Users, Wallet,
 } from 'lucide-react';
 import Shell from '../../../shared/components/layout/Shell';
 import { areaSwitcherFor } from '../../../shared/components/layout/areaSwitcher';
@@ -16,7 +16,6 @@ export const NAVS = {
       { to: '/learn', label: 'Home', icon: Home, end: true, mobile: true },
       { to: '/learn/courses', label: 'Learn', icon: BookOpen, mobile: true },
       { to: '/courses', label: 'Explore', icon: Compass, mobile: true },
-      { to: '/learn/applications', label: 'Applications', icon: ClipboardList },
       { to: '/learn/bookings', label: 'Tutor sessions', icon: CalendarDays },
       { to: '/learn/certificates', label: 'Certificates', icon: Award },
       { to: '/learn/payments', label: 'Payments', icon: CreditCard },

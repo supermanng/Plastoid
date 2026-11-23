@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
 import { Award, Check, ChevronLeft, ChevronRight, CircleDot, FileText, ListTree, MessageSquare, PlayCircle, Video, ClipboardCheck, Upload, Circle } from 'lucide-react';
 import { Alert, Breadcrumb, Button, Card, EmptyState, ErrorAlert, Loading, ProgressBar, StatusPill, Tabs } from '../../../../shared/components/ui';
+import { SponsoredChip } from './SponsoredChip';
 import { useAction } from '../../../../shared/lib/hooks';
 import { formatDate } from '../../../../shared/lib/format';
 import { catalogue, keys, lms } from '../../api/learn';
@@ -71,7 +72,10 @@ export default function CoursePlayer() {
     <div>
       <Breadcrumb items={[{ to: '/learn/courses', label: 'My courses' }, { label: title }]} />
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl sm:text-2xl">{title}</h1>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <h1 className="text-xl sm:text-2xl">{title}</h1>
+          <SponsoredChip enrolment={enrolment} />
+        </div>
         <div className="flex items-center gap-2">
           <StatusPill status={enrolment.status} />
           {enrolment.status === 'active' ? <Button size="sm" variant={allDone ? 'teal' : 'secondary'} icon={Award} loading={complete.isPending} onClick={() => complete.mutate()}>Complete course</Button> : null}

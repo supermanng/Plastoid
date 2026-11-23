@@ -3,17 +3,19 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BookOpen, Building2, Clock, FileText, Globe, GraduationCap, Layers, Lock, PlayCircle, Star, Video, ClipboardCheck, Radio } from 'lucide-react';
 import { Alert, Button, Card, CardHeader, EmptyState, ErrorAlert, Field, Loading, Select, StatusPill, Textarea, useToast } from '../../../../shared/components/ui';
-import { useAuth } from '../../../../shared/lib/auth';
+import { ROLES, useAuth } from '../../../../shared/lib/auth';
+import { AppLink } from '../../../../shared/lib/navigation';
 import { useAction } from '../../../../shared/lib/hooks';
 import { api } from '../../../../shared/lib/api';
 import { formatDate, formatDateTime, formatMoney, pluralise, titleCase } from '../../../../shared/lib/format';
 import { UnitPrice, formatUnits, unitsFor, useUnitRate } from '../../../../shared/lib/units.jsx';
 import { walletApi, walletKeys } from '../../../../shared/api/wallet';
 import { createCourseCheckout, getCourse, goToCheckout, postReview, queryKeys } from '../../../../shared/api/public';
+import { CohortGrid, useUpcomingCohorts } from './CohortCard';
 
 const LESSON_ICON = { video: Video, doc: FileText, document: FileText, assignment: ClipboardCheck, live: Radio, quiz: ClipboardCheck };
 
-/** /courses/:slug — outline, offerings with 30-minute quotes, reviews, sponsored-seats panel and enrolment. */
+/** /courses/:slug — outline, offerings with 30-minute quotes, upcoming cohorts (ADR 0021), reviews and enrolment. */
 export default function CourseDetail() {
   const { slug } = useParams();
   const query = useQuery({ queryKey: queryKeys.course(slug), queryFn: () => getCourse(slug) });
@@ -54,6 +56,11 @@ export default function CourseDetail() {
           {c.skills?.length ? <div className="mt-4 flex flex-wrap gap-1.5">{c.skills.map((s) => <Link key={s} to={`/courses?skill=${encodeURIComponent(s)}`} className="rounded-chip border border-line px-2.5 py-0.5 text-xs font-semibold text-navy hover:border-royal">{s}</Link>)}</div> : null}
 
           <div className="lg:hidden"><OfferingsPanel course={c} className="mt-6" /></div>
+
+          <section className="mt-10">
+            <h2 className="text-xl">Upcoming cohorts</h2>
+            <UpcomingCohorts course={c} />
+          </section>
 
           <section className="mt-10">
             <h2 className="text-xl">Syllabus</h2>
@@ -154,7 +161,7 @@ function OfferingsPanel({ course, className }) {
               </div>
               {(o.fundingTypes || []).some((f) => /sponsor/i.test(f)) ? <div className="mt-2"><StatusPill tone="success" status="sponsored" label="Sponsored seats accepted" /></div> : null}
               <div className="mt-3 flex flex-col gap-2">
-                {full ? <Alert tone="warn">Seats are full. Sponsored opportunities for this course may still be open.</Alert> : null}
+                {full ? <Alert tone="warn">Seats are full. A sponsor can still give you a seat in an upcoming cohort.</Alert> : null}
                 {!sponsoredOnly ? (
                   auth.isAuthenticated ? (
                     <PayButtons
@@ -170,8 +177,9 @@ function OfferingsPanel({ course, className }) {
                   ) : (
                     <Button className="w-full" disabled={full} onClick={() => enrol(o)}>Sign in to enrol</Button>
                   )
-                ) : null}
-                <Button to={`/opportunities`} variant={sponsoredOnly ? 'primary' : 'ghost'} className="w-full" size="sm">Find a sponsored seat</Button>
+                ) : (
+                  <p className="text-xs text-muted">Seats in this offering are given out by sponsors; see the upcoming cohorts below.</p>
+                )}
               </div>
               <div className="mt-2 text-[11px] text-muted">Quote valid until {formatDateTime(o.priceValidUntil)}</div>
             </div>
@@ -206,6 +214,30 @@ function PayButtons({ offering, full, units, balance, busy, busyWithUnits, onUni
       ) : null}
       <Button variant="secondary" className="w-full" loading={busy && !busyWithUnits} disabled={full || busy} onClick={onCard}>Pay {formatMoney(offering.price)} by card</Button>
     </>
+  );
+}
+
+/** Dated runs of this course with seats left and the price per seat; sponsors get a shortcut to buy seats. */
+function UpcomingCohorts({ course }) {
+  const auth = useAuth();
+  const filters = { courseId: course.courseId };
+  const cohorts = useUpcomingCohorts(filters, { enabled: Boolean(course.courseId) });
+  const isSponsor = auth.isAuthenticated && auth.hasRole?.(ROLES.sponsor);
+  return (
+    <div className="mt-4 space-y-3">
+      <p className="text-sm text-muted">A cohort runs between fixed dates with live classes. Enrol through an offering on the right, or an organisation can buy seats and give you one.</p>
+      <CohortGrid
+        query={cohorts}
+        columns="sm:grid-cols-2"
+        showCourse={false}
+        empty={<Card className="text-sm text-muted">No cohort is scheduled for this course right now.</Card>}
+      />
+      {isSponsor ? (
+        <p className="text-sm text-navy">
+          Sponsoring your people? <AppLink to="/sponsor/seats/new" className="font-semibold text-royal">Buy seats in a cohort</AppLink> and give them out by phone or email.
+        </p>
+      ) : null}
+    </div>
   );
 }
 

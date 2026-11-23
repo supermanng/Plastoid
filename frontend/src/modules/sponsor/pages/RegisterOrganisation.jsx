@@ -59,7 +59,7 @@ export default function RegisterOrganisation() {
           </Alert>
           {!auth.mfa ? (
             <Alert tone="warn" title="Two-step verification required">
-              Sponsor actions (campaigns, quotes, invoices) need an authenticator app on your account. Set it up now; it takes a minute.
+              Sponsor actions (buying units, buying seats, giving seats to learners) need an authenticator app on your account. Set it up now; it takes a minute.
               <div className="mt-3"><Button to="/auth/mfa" size="sm" icon={ShieldCheck} state={{ from: '/sponsor' }}>Set up MFA</Button></div>
             </Alert>
           ) : null}
@@ -76,7 +76,7 @@ export default function RegisterOrganisation() {
     <div className="mx-auto max-w-2xl">
       <PageHeader
         title="Register your organisation"
-        description="Sponsors fund seats on Plastoids programmes; training providers publish courses taught by verified tutors. We verify every organisation (CAC number and authorised signatory) before a campaign or course can be published."
+        description="Sponsors buy seats in course cohorts and give them to their people; training providers publish courses taught by verified tutors. We verify every organisation (CAC number and authorised signatory)."
       />
       <Card>
         <div className="mb-4 flex items-center gap-3 text-sm text-muted">
@@ -101,7 +101,7 @@ export default function RegisterOrganisation() {
             </Field>
           </FormGrid>
           <FormGrid>
-            <Field label="Authorised signatory" hint="The person who can approve quotes and invoices." required error={error?.field?.('signatoryName')}>
+            <Field label="Authorised signatory" hint="The person who can commit the organisation's money." required error={error?.field?.('signatoryName')}>
               {(p) => <Input {...p} {...bind('signatoryName')} required />}
             </Field>
             <Field label="Signatory email" required error={error?.field?.('signatoryEmail')}>

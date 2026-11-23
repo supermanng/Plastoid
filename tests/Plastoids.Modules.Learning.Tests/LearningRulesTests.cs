@@ -96,4 +96,56 @@ public class LearningRulesTests
         cohort.HasSeats.Should().BeTrue();
         Cohort.Create(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "x", Now, Now, 1, null).Error.Code.Should().Be("cohort_dates_invalid");
     }
+
+    [Fact]
+    public void Reserved_seats_count_against_capacity_and_convert_without_a_second_check()
+    {
+        var cohort = Cohort.Create(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Jan intake", Now, Now.AddDays(60), 3, null).Value;
+        cohort.Admit().IsSuccess.Should().BeTrue();
+        cohort.Reserve(2, Now).IsSuccess.Should().BeTrue();
+        cohort.Reserved.Should().Be(2);
+        cohort.SeatsLeft.Should().Be(0);
+        cohort.HasSeats.Should().BeFalse("1 enrolled + 2 reserved = capacity 3");
+        cohort.Admit().Error.Code.Should().Be("cohort_full", "a reservation blocks walk-in enrolment");
+        cohort.Reserve(1, Now).Error.Code.Should().Be("cohort_full");
+        cohort.Reserve(0, Now).Error.Code.Should().Be("seats_invalid");
+
+        // A sponsor allocates one reserved seat: it moves from reserved to enrolled, never exceeding capacity.
+        cohort.AdmitReserved();
+        cohort.Reserved.Should().Be(1);
+        cohort.Enrolled.Should().Be(2);
+        cohort.SeatsLeft.Should().Be(0);
+        cohort.AdmitReserved();
+        (cohort.Enrolled + cohort.Reserved).Should().Be(3, "converting reserved seats never overfills the cohort");
+        cohort.Admit().Error.Code.Should().Be("cohort_full");
+
+        // Release gives seats back and never goes negative.
+        cohort.Reserve(0, Now).IsFailure.Should().BeTrue();
+        cohort.Release();
+        cohort.Reserve(1, Now).IsSuccess.Should().BeTrue();
+        cohort.ReleaseReserved(5);
+        cohort.Reserved.Should().Be(0);
+        cohort.ReleaseReserved(-1);
+        cohort.Reserved.Should().Be(0);
+        cohort.SeatsLeft.Should().Be(1);
+    }
+
+    [Fact]
+    public void Seats_cannot_be_reserved_once_the_cohort_has_ended()
+    {
+        var cohort = Cohort.Create(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Past intake", Now.AddDays(-90), Now.AddDays(-30), 10, null).Value;
+        cohort.Reserve(1, Now).Error.Code.Should().Be("cohort_ended");
+        cohort.Reserve(1, Now.AddDays(-30)).Error.Code.Should().Be("cohort_ended", "the end instant itself counts as ended");
+        cohort.Reserve(1, Now.AddDays(-31)).IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Enrolment_keeps_the_funding_label_for_sponsored_seats()
+    {
+        var sponsored = Enrolment.Create(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, "sponsored", Guid.NewGuid(), "seat:x", 5, Now, Now.AddDays(90), "  Sponsored by Lagos Data School ");
+        sponsored.FundingLabel.Should().Be("Sponsored by Lagos Data School");
+        var self = Enrolment.Create(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null, 1, "self", null, "payment:y", 5, Now, Now.AddDays(90));
+        self.FundingLabel.Should().BeNull();
+        Enrolment.Create(Tenants.Marketplace, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null, 1, "self", null, "payment:z", 5, Now, Now.AddDays(90), "   ").FundingLabel.Should().BeNull();
+    }
 }

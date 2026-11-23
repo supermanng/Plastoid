@@ -14,6 +14,7 @@ using Plastoids.Modules.Lms.Consumers;
 using Plastoids.Modules.Lms.Contracts;
 using Plastoids.Modules.Lms.Features.Cohorts.CohortForum;
 using Plastoids.Modules.Lms.Features.Cohorts.CreateCohort;
+using Plastoids.Modules.Lms.Features.Cohorts.ListCohorts;
 using Plastoids.Modules.Lms.Features.Cohorts.ScheduleCohortSessions;
 using Plastoids.Modules.Lms.Features.Learning.CompleteEnrolment;
 using Plastoids.Modules.Lms.Features.Learning.GetGradebook;
@@ -31,6 +32,7 @@ using Plastoids.Modules.Lms.Features.Live.ListUpcomingSessions;
 using Plastoids.Modules.Lms.Persistence;
 using Plastoids.Modules.Lms.Services;
 using Plastoids.Modules.Payments.Contracts;
+using Plastoids.Modules.Sponsorship.Contracts;
 
 namespace Plastoids.Modules.Lms;
 
@@ -61,6 +63,8 @@ public sealed class LmsModule : IModule
         services.AddScoped<IEnrolmentProgress, LmsEnrolmentProgress>();
         services.AddScoped<IAssessmentGrader, AssessmentGrader>();
         services.AddScoped<ICohortMembers, CohortMembers>();
+        services.AddScoped<ICohortSeats, CohortSeats>();
+        services.AddScoped<CohortListings>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
@@ -84,6 +88,7 @@ public sealed class LmsModule : IModule
         RequestOfflineDownloadEndpoint.Map(enrolments);
 
         var cohorts = lms.MapGroup("/cohorts");
+        ListCohortsEndpoints.Map(cohorts);
         CreateCohortEndpoint.Map(cohorts);
         ScheduleCohortSessionsEndpoint.Map(cohorts);
         CohortForumEndpoints.Map(lms);
@@ -97,5 +102,6 @@ public sealed class LmsModule : IModule
         ConsumerRegistry.For<PaymentSucceeded, CoursePaymentConsumer, LmsDbContext>(Name),
         ConsumerRegistry.For<OfferAccepted, OfferAcceptedConsumer, LmsDbContext>(Name),
         ConsumerRegistry.For<CoursePublished, CoursePublishedConsumer, LmsDbContext>(Name),
+        ConsumerRegistry.For<SeatAllocated, SeatAllocatedConsumer, LmsDbContext>(Name),
     ];
 }

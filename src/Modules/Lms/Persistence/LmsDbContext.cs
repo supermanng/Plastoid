@@ -65,6 +65,7 @@ public sealed class LmsDbContext(DbContextOptions<LmsDbContext> options, ICurren
             b.ToTable("lms_enrolments");
             b.Ignore(x => x.IsActive);
             b.Property(x => x.FundingSource).HasMaxLength(16);
+            b.Property(x => x.FundingLabel).HasMaxLength(120);
             b.Property(x => x.SourceKey).HasMaxLength(120);
             b.HasIndex(x => x.SourceKey).IsUnique();
             b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
@@ -110,6 +111,7 @@ public sealed class LmsDbContext(DbContextOptions<LmsDbContext> options, ICurren
         {
             b.ToTable("lms_cohorts");
             b.Ignore(x => x.HasSeats);
+            b.Ignore(x => x.SeatsLeft);
             b.Property(x => x.Name).HasMaxLength(160);
             b.HasIndex(x => new { x.OfferingId, x.StartsAt });
             b.HasIndex(x => x.TutorUserId);

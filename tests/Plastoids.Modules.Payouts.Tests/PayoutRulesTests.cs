@@ -2,6 +2,7 @@ using Plastoids.Modules.Ledger.Contracts;
 using Plastoids.Modules.Payments.Contracts;
 using Plastoids.Modules.Payouts.Domain;
 using Plastoids.Modules.Payouts.Services;
+using Plastoids.Modules.Sponsorship.Contracts;
 using Plastoids.SharedKernel.Domain;
 using Plastoids.SharedKernel.Tenancy;
 
@@ -158,6 +159,63 @@ public class PayoutRulesTests
         hold.Release(Guid.NewGuid(), "Resolved in the tutor's favour", Now.AddDays(1)).IsSuccess.Should().BeTrue();
         hold.Release(Guid.NewGuid(), "again", Now.AddDays(2)).Error.Code.Should().Be("hold_already_released");
     }
+
+    [Fact]
+    public void A_sponsored_seat_on_an_organisation_course_earns_for_the_organisation_and_the_engaged_tutor()
+    {
+        var organisation = Guid.NewGuid();
+        var tutor = Guid.NewGuid();
+        var allocation = Guid.NewGuid();
+        var block = Guid.NewGuid();
+        // ₦45,000 seat at 15%: commission 6,750; net 38,250; tutor share 40% of net = 15,300; organisation 22,950.
+        var @event = SeatEvent(allocation, block, PayeeTypes.Organisation, organisation, Money.NairaAmount(22_950), tutor, Money.NairaAmount(15_300));
+
+        var earnings = SeatEarnings.Build(Tenants.Marketplace, @event, Now, 7);
+
+        earnings.Should().HaveCount(2);
+        var forOrganisation = earnings.Single(e => e.PayeeType == PayeeTypes.Organisation);
+        forOrganisation.PayeeId.Should().Be(organisation);
+        forOrganisation.SourceType.Should().Be(EarningSources.Seat);
+        forOrganisation.SourceKey.Should().Be("seat:" + allocation.ToString("N"));
+        forOrganisation.SourceId.Should().Be(allocation);
+        forOrganisation.ReferenceId.Should().Be(block);
+        forOrganisation.Gross.Should().Be(Money.NairaAmount(45_000));
+        forOrganisation.Net.Should().Be(Money.NairaAmount(22_950));
+        forOrganisation.Commission.Should().Be(Money.NairaAmount(22_050), "the row's commission is gross − its net; the tutor share sits on the tutor's row");
+        forOrganisation.Status.Should().Be(EarningStatus.Held);
+        forOrganisation.ReleasesAt.Should().Be(Now.AddDays(7), "a seat holds like a course sale");
+
+        var forTutor = earnings.Single(e => e.PayeeType == PayeeTypes.Tutor);
+        forTutor.PayeeId.Should().Be(tutor);
+        forTutor.SourceKey.Should().Be("seat:" + allocation.ToString("N") + ":tutor");
+        forTutor.Net.Should().Be(Money.NairaAmount(15_300));
+        forTutor.ReleasesAt.Should().Be(Now.AddDays(7));
+
+        // No tutor share → one row only, even with a tutor named.
+        SeatEarnings.Build(Tenants.Marketplace, SeatEvent(allocation, block, PayeeTypes.Organisation, organisation, Money.NairaAmount(38_250), tutor, Money.Zero()), Now, 7).Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void A_sponsored_seat_on_a_tutor_course_earns_once_for_the_tutor()
+    {
+        var tutor = Guid.NewGuid();
+        var allocation = Guid.NewGuid();
+        var @event = SeatEvent(allocation, Guid.NewGuid(), PayeeTypes.Tutor, tutor, Money.NairaAmount(38_250), tutor, Money.NairaAmount(38_250));
+
+        var earnings = SeatEarnings.Build(Tenants.Marketplace, @event, Now, 7);
+
+        var earning = earnings.Should().ContainSingle().Subject;
+        earning.PayeeType.Should().Be(PayeeTypes.Tutor);
+        earning.PayeeId.Should().Be(tutor);
+        earning.SourceKey.Should().Be("seat:" + allocation.ToString("N"));
+        earning.Gross.Should().Be(Money.NairaAmount(45_000));
+        earning.Net.Should().Be(Money.NairaAmount(38_250));
+        earning.Commission.Should().Be(Money.NairaAmount(6_750));
+        PayableCalculator.Summarise(earnings, [], false, Money.NairaAmount(38_250)).Held.Should().Be(Money.NairaAmount(38_250));
+    }
+
+    private static SeatAllocated SeatEvent(Guid allocation, Guid block, string payeeType, Guid payeeId, Money payeeNet, Guid? tutor, Money tutorShare)
+        => new(allocation, block, allocation, Guid.NewGuid(), "Lagos Data School", Guid.NewGuid(), "Jan intake", Guid.NewGuid(), "SQL for Analysts", Guid.NewGuid(), Guid.NewGuid(), Money.NairaAmount(45_000), payeeType, payeeId, payeeNet, tutor, tutorShare, Money.NairaAmount(6_750));
 
     private static Earning Released(Guid tutor, long net)
     {

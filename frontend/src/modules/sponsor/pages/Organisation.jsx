@@ -6,13 +6,13 @@ import { useForm } from '../../../shared/lib/hooks';
 import { sponsorApi } from '../api/sponsor';
 import { useOrganisation } from './useOrganisation';
 import { NoOrganisation, OrganisationSwitcher, RoleHint, VerificationBanner } from './OrganisationSwitcher';
-import { OrganisationWalletCard } from './PayFromWallet';
+import { OrganisationWalletCard } from './OrganisationWalletCard';
 
 const ROLES = [
   ['owner', 'Owner: everything, including publishing and members'],
-  ['finance', 'Finance: approve quotes, issue and view invoices, payout account'],
+  ['finance', 'Finance: buy units, buy and release seats, give seats to learners, payout account'],
   ['author', 'Author: create and edit courses, engage tutors'],
-  ['member', 'Member: build campaigns and view reports'],
+  ['member', 'Member: view seats, courses and the wallet'],
 ];
 
 /*

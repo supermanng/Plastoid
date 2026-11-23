@@ -5,8 +5,9 @@ import { ArrowRight, Check } from 'lucide-react';
 import { Button, Card, Chip, ErrorAlert, Field, Input, Skeleton, Stepper } from '../../../../shared/components/ui';
 import { useAuth } from '../../../../shared/lib/auth';
 import { useAction } from '../../../../shared/lib/hooks';
-import { CourseCard, OpportunityCard } from '../public/Home';
-import { applications, catalogue, identity, keys } from '../../api/learn';
+import { CourseCard } from '../public/Home';
+import { CohortGrid, useUpcomingCohorts } from '../public/CohortCard';
+import { catalogue, identity, keys } from '../../api/learn';
 
 const INTERESTS = ['Software development', 'Data analysis', 'Product design', 'Digital marketing', 'Business & finance', 'Cybersecurity', 'Cloud & DevOps', 'Content creation', 'Project management', 'Trades & technical', 'Health & care', 'Teaching'];
 const LEVELS = [
@@ -105,18 +106,16 @@ export default function Onboarding() {
 function Recommendations({ goal, interests, level, onFinish }) {
   const q = interests[0] || goal;
   const courses = useQuery({ queryKey: keys.courses({ q, level, limit: 6 }), queryFn: () => catalogue.search({ q, level, limit: 6 }) });
-  const opportunities = useQuery({ queryKey: [...keys.opportunities, 'onboarding'], queryFn: () => applications.opportunities({ limit: 3 }) });
+  const cohorts = useUpcomingCohorts({ limit: 3 });
   const courseItems = courses.data?.items?.length ? courses.data.items : courses.data?.suggestions?.popular || [];
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="text-2xl sm:text-3xl">You’re all set</h1>
       <p className="mt-1 text-sm text-muted">Here is where to start, based on “{goal}”.</p>
-      <h2 className="mt-8 text-lg">Sponsored seats open now</h2>
-      {opportunities.isPending ? <Skeleton className="mt-3 h-32" /> : null}
-      <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {(opportunities.data?.items || []).map((o) => <OpportunityCard key={o.programmeId} o={o} />)}
+      <h2 className="mt-8 text-lg">Cohorts starting soon</h2>
+      <div className="mt-3">
+        <CohortGrid query={cohorts} limit={3} empty={<p className="text-sm text-muted">No cohorts are scheduled right now; self-paced courses are below.</p>} />
       </div>
-      {opportunities.data && !opportunities.data.items?.length ? <p className="text-sm text-muted">None open right now; we will notify you when one matches.</p> : null}
       <h2 className="mt-8 text-lg">Courses for you</h2>
       {courses.isPending ? <Skeleton className="mt-3 h-32" /> : null}
       <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

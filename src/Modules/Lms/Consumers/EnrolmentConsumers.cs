@@ -6,6 +6,7 @@ using Plastoids.Modules.Lms.Domain;
 using Plastoids.Modules.Lms.Persistence;
 using Plastoids.Modules.Lms.Services;
 using Plastoids.Modules.Payments.Contracts;
+using Plastoids.Modules.Sponsorship.Contracts;
 using Plastoids.SharedKernel.Messaging;
 
 namespace Plastoids.Modules.Lms.Consumers;
@@ -20,7 +21,7 @@ internal sealed class CoursePaymentConsumer(EnrolmentService enrolments) : IInte
             return;
         }
 
-        var result = await enrolments.EnrolAsync(@event.PayerId, @event.ReferenceId, FundingSources.Self, @event.PaymentIntentId, "payment:" + @event.PaymentIntentId.ToString("N"), null, cancellationToken);
+        var result = await enrolments.EnrolAsync(@event.PayerId, @event.ReferenceId, FundingSources.Self, @event.PaymentIntentId, "payment:" + @event.PaymentIntentId.ToString("N"), null, null, false, cancellationToken);
         if (result.IsFailure)
         {
             throw new InvalidOperationException($"Enrolment from payment {@event.PaymentIntentId} failed: {result.Error.Code}");
@@ -33,10 +34,26 @@ internal sealed class OfferAcceptedConsumer(EnrolmentService enrolments) : IInte
 {
     public async Task HandleAsync(OfferAccepted @event, IntegrationEventEnvelope envelope, CancellationToken cancellationToken)
     {
-        var result = await enrolments.EnrolAsync(@event.LearnerId, @event.OfferingId, FundingSources.Sponsored, @event.ProgrammeId, "application:" + @event.ApplicationId.ToString("N"), null, cancellationToken);
+        var result = await enrolments.EnrolAsync(@event.LearnerId, @event.OfferingId, FundingSources.Sponsored, @event.ProgrammeId, "application:" + @event.ApplicationId.ToString("N"), null, null, false, cancellationToken);
         if (result.IsFailure)
         {
             throw new InvalidOperationException($"Sponsored enrolment for application {@event.ApplicationId} failed: {result.Error.Code}");
+        }
+    }
+}
+
+/// <summary>
+/// sponsorship.seat-allocated.v1 (ADR 0021) → sponsored enrolment in the named cohort, converting the seat block's reservation
+/// (idempotent on the allocation). A failure throws so the inbox retries.
+/// </summary>
+internal sealed class SeatAllocatedConsumer(EnrolmentService enrolments) : IIntegrationEventHandler<SeatAllocated>
+{
+    public async Task HandleAsync(SeatAllocated @event, IntegrationEventEnvelope envelope, CancellationToken cancellationToken)
+    {
+        var result = await enrolments.EnrolAsync(@event.LearnerId, @event.OfferingId, FundingSources.Sponsored, @event.BlockId, "seat:" + @event.AllocationId.ToString("N"), @event.CohortId, "Sponsored by " + @event.SponsorName, true, cancellationToken);
+        if (result.IsFailure)
+        {
+            throw new InvalidOperationException($"Sponsored enrolment for seat allocation {@event.AllocationId} failed: {result.Error.Code}");
         }
     }
 }

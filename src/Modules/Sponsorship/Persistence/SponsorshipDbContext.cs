@@ -17,6 +17,8 @@ public sealed class SponsorshipDbContext(DbContextOptions<SponsorshipDbContext> 
     public DbSet<ProgrammeMonth> Months => Set<ProgrammeMonth>();
     public DbSet<ProgrammeAttendance> Attendance => Set<ProgrammeAttendance>();
     public DbSet<FundingReceipt> Receipts => Set<FundingReceipt>();
+    public DbSet<SeatBlock> SeatBlocks => Set<SeatBlock>();
+    public DbSet<SeatAllocation> SeatAllocations => Set<SeatAllocation>();
 
     protected override void ConfigureModule(ModelBuilder modelBuilder)
     {
@@ -84,6 +86,38 @@ public sealed class SponsorshipDbContext(DbContextOptions<SponsorshipDbContext> 
             b.ToTable("sponsorship_funding_receipts");
             b.HasIndex(x => x.ProgrammeId);
             b.HasIndex(x => x.InvoiceId).IsUnique();
+        });
+
+        modelBuilder.Entity<SeatBlock>(b =>
+        {
+            b.ToTable("sponsorship_seat_blocks");
+            b.Ignore(x => x.Open);
+            b.Ignore(x => x.TotalPrice);
+            b.Property(x => x.SponsorName).HasMaxLength(160);
+            b.Property(x => x.CohortName).HasMaxLength(160);
+            b.Property(x => x.CourseTitle).HasMaxLength(200);
+            b.Property(x => x.CourseSlug).HasMaxLength(200);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            b.HasIndex(x => new { x.OrganisationId, x.Status });
+            b.HasIndex(x => x.CohortId);
+            b.HasIndex(x => new { x.Status, x.EndsAt });
+        });
+
+        modelBuilder.Entity<SeatAllocation>(b =>
+        {
+            b.ToTable("sponsorship_seat_allocations");
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            b.Property(x => x.DisplayName).HasMaxLength(120);
+            b.Property(x => x.ContactKind).HasMaxLength(8);
+            b.Property(x => x.PhoneHash).HasMaxLength(64);
+            b.Property(x => x.Email).HasMaxLength(254);
+            b.Property(x => x.ContactMasked).HasMaxLength(254);
+            b.Property(x => x.PayeeType).HasMaxLength(16);
+            b.HasIndex(x => new { x.BlockId, x.SeatNo }).IsUnique();
+            b.HasIndex(x => new { x.BlockId, x.LearnerId });
+            b.HasIndex(x => x.PhoneHash);
+            b.HasIndex(x => x.Email);
+            b.HasIndex(x => x.EnrolmentId);
         });
     }
 }

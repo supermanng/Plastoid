@@ -42,15 +42,15 @@ src/shared/                                        everything more than one modu
   styles/index.css    Tailwind v4 @theme tokens (navy/royal/cyan/teal, surface/line/muted, fonts, radii)
 src/modules/learner/   router basename `/`: public site, auth, /learn/*, /tutor/*
   main.jsx, App.jsx, layout/{PublicLayout,AppShell}.jsx, api/{learn,tutor}.js
-  pages/public        home, courses, compare, course detail, opportunities, tutors, booking, verify, marketing pages
-  pages/learn         dashboard, onboarding, my courses + player (video/doc/quiz/assignment), applications, bookings, certificates, payments, wallet, messages, notifications, profile
+  pages/public        home (upcoming cohorts), courses, compare, course detail (upcoming cohorts), tutors, booking, verify, marketing pages
+  pages/learn         dashboard, onboarding, my courses + player (video/doc/quiz/assignment; "Sponsored by …" chip), bookings, certificates, payments, wallet, messages, notifications, profile
   pages/tutor         onboarding (5 verification stages), dashboard, profile (availability/pricing/payout account), courses + lesson builder, offers (engagements), gradebook, cohorts, sessions, earnings
 src/modules/sponsor/   router basename `/sponsor`: the organisation portal (sponsors and providers)
-  main.jsx, App.jsx, layout/AppShell.jsx, api/{sponsor,provider}.js
-  pages/              register organisation, dashboard, organisation members, programmes, campaign stepper, programme detail (budget/funnel/report), invoices, wallet, courses + editor + course tutors (engagements), payouts (ADR 0019)
+  main.jsx, App.jsx, layout/AppShell.jsx, api/{sponsor,seats,provider}.js
+  pages/              register organisation, dashboard, organisation members, seats (list, buy seats in a cohort, seat block: give/release seats — ADR 0021), wallet, courses + editor + course tutors (engagements), payouts (ADR 0019)
 src/modules/admin/     router basename `/admin`: the back office
   main.jsx, App.jsx, layout/AppShell.jsx, api/admin.js
-  pages/              dashboard, queues, users, tutors, sponsors, programmes + applications review, course moderation, finance (ledger/reconciliation/settlements/refunds), payouts, fee rules, unit rates, role grants, templates, feature flags, compliance, audit
+  pages/              dashboard, queues, users, tutors, sponsors, seat blocks (read-only, ADR 0021), course moderation, finance (ledger/reconciliation/settlements/refunds), payouts, fee rules, unit rates, role grants, templates, feature flags, compliance, audit
 scripts/check-module-boundaries.mjs   fails when a module imports another module, or shared imports a module
 ```
 
@@ -97,4 +97,4 @@ The image serves `dist/` with nginx (one history fallback per module: `/sponsor/
 
 ## Known gaps (backend reads the UI works around)
 
-Recorded in `docs/adr/0017-react-frontend.md`: no "my cohorts / my programmes / my invoices" list endpoints (pages remember ids created in this browser and offer open-by-id), no single-tutor or single-opportunity public read (pages search the list), the video SDK and HLS player are not embedded (join details and stream URLs are shown). Courses are listed from `GET /catalogue/courses/mine` and `GET /catalogue/organisations/{id}/courses` and drafts load from the authoring view since ADR 0019, so the browser no longer remembers course ids.
+Recorded in `docs/adr/0017-react-frontend.md`: no "my cohorts" list endpoint for tutors (the page remembers ids created in this browser and offers open-by-id), no single-tutor public read (pages search the list), the video SDK and HLS player are not embedded (join details and stream URLs are shown). Seat sponsorship (ADR 0021) lists seat blocks from the API, so nothing is remembered in the browser for it. Courses are listed from `GET /catalogue/courses/mine` and `GET /catalogue/organisations/{id}/courses` and drafts load from the authoring view since ADR 0019, so the browser no longer remembers course ids.

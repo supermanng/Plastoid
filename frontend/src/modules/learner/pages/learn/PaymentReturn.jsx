@@ -66,7 +66,7 @@ export default function PaymentReturn() {
           <Button to="/learn/payments" variant="secondary">All payments</Button>
           <Button to="/learn" variant="ghost">Dashboard</Button>
         </div>
-        {state.status !== 'verifying' ? <p className="mt-4 text-xs text-muted"><Link to="/learn/courses">My courses</Link> · <Link to="/learn/bookings">Tutor sessions</Link> · <Link to="/learn/applications">Applications</Link></p> : null}
+        {state.status !== 'verifying' ? <p className="mt-4 text-xs text-muted"><Link to="/learn/courses">My courses</Link> · <Link to="/learn/bookings">Tutor sessions</Link></p> : null}
       </Card>
     </div>
   );

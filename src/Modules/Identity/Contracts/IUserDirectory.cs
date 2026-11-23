@@ -7,4 +7,7 @@ public sealed record UserSummary(Guid UserId, string DisplayName, string? Email,
 public interface IUserDirectory
 {
     Task<UserSummary?> GetAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Finds an account by phone (any format; normalised and matched on the blind index) or by email (case-insensitive). Null when neither matches (ADR 0021 seat allocation).</summary>
+    Task<UserSummary?> FindByContactAsync(string? phone, string? email, CancellationToken cancellationToken);
 }

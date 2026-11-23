@@ -26,7 +26,7 @@ export default function Notifications() {
     <div>
       <PageHeader
         title="Notifications"
-        description="Application updates, class reminders, payments and messages. Delivery also goes by WhatsApp, SMS, push or email in the order you choose."
+        description="Sponsored seats, class reminders, payments and messages. Delivery also goes by WhatsApp, SMS, push or email in the order you choose."
         actions={<>
           <Button variant="secondary" size="sm" icon={CheckCheck} disabled={!unread.length} loading={markAll.isPending} onClick={() => markAll.mutate()}>Mark all read</Button>
           <Button to="/learn/notifications/preferences" variant="secondary" size="sm" icon={Settings}>Preferences</Button>

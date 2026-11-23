@@ -10,6 +10,7 @@
     <ProjectReference Include="../Identity/Plastoids.Modules.Identity.csproj" />
     <ProjectReference Include="../Payments/Plastoids.Modules.Payments.csproj" />
     <ProjectReference Include="../Applications/Contracts/Plastoids.Modules.Applications.Contracts.csproj" />
+    <ProjectReference Include="../Sponsorship/Contracts/Plastoids.Modules.Sponsorship.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />

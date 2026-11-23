@@ -17,8 +17,6 @@ const Home = lazy(() => import('./pages/public/Home'));
 const Courses = lazy(() => import('./pages/public/Courses'));
 const CourseDetail = lazy(() => import('./pages/public/CourseDetail'));
 const Compare = lazy(() => import('./pages/public/Compare'));
-const Opportunities = lazy(() => import('./pages/public/Opportunities'));
-const OpportunityDetail = lazy(() => import('./pages/public/OpportunityDetail'));
 const Tutors = lazy(() => import('./pages/public/Tutors'));
 const TutorProfile = lazy(() => import('./pages/public/TutorProfile'));
 const BecomeTutor = lazy(() => import('./pages/public/BecomeTutor'));
@@ -38,9 +36,6 @@ const LearnDashboard = lazy(() => import('./pages/learn/Dashboard'));
 const LearnOnboarding = lazy(() => import('./pages/learn/Onboarding'));
 const MyCourses = lazy(() => import('./pages/learn/MyCourses'));
 const CoursePlayer = lazy(() => import('./pages/learn/CoursePlayer'));
-const MyApplications = lazy(() => import('./pages/learn/Applications'));
-const ApplicationDetail = lazy(() => import('./pages/learn/ApplicationDetail'));
-const Apply = lazy(() => import('./pages/learn/Apply'));
 const MyBookings = lazy(() => import('./pages/learn/Bookings'));
 const BookingDetail = lazy(() => import('./pages/learn/BookingDetail'));
 const MyCertificates = lazy(() => import('./pages/learn/Certificates'));
@@ -89,8 +84,6 @@ export default function App() {
           <Route path="courses" element={<Courses />} />
           <Route path="courses/compare" element={<Compare />} />
           <Route path="courses/:slug" element={<CourseDetail />} />
-          <Route path="opportunities" element={<Opportunities />} />
-          <Route path="opportunities/:programmeId" element={<OpportunityDetail />} />
           <Route path="tutors" element={<Tutors />} />
           <Route path="tutors/:tutorId" element={<TutorProfile />} />
           <Route path="become-a-tutor" element={<BecomeTutor />} />
@@ -115,9 +108,6 @@ export default function App() {
           <Route path="courses" element={<MyCourses />} />
           <Route path="courses/:enrolmentId" element={<CoursePlayer />} />
           <Route path="courses/:enrolmentId/lessons/:lessonId" element={<CoursePlayer />} />
-          <Route path="applications" element={<MyApplications />} />
-          <Route path="applications/:applicationId" element={<ApplicationDetail />} />
-          <Route path="apply/:programmeId" element={<Apply />} />
           <Route path="bookings" element={<MyBookings />} />
           <Route path="bookings/:bookingId" element={<BookingDetail />} />
           <Route path="certificates" element={<MyCertificates />} />

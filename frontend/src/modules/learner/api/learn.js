@@ -14,8 +14,6 @@ export const keys = {
   upcoming: (days) => ['lms', 'live', 'upcoming', days],
   threads: (cohortId) => ['lms', 'threads', cohortId],
   announcements: (cohortId) => ['notifications', 'announcements', cohortId],
-  applications: ['applications', 'me'],
-  opportunities: ['sponsorship', 'opportunities'],
   bookings: (params) => ['bookings', 'me', params],
   booking: (id) => ['bookings', id],
   availability: (tutorId, from, days) => ['tutors', tutorId, 'availability', from, days],
@@ -48,6 +46,7 @@ export const catalogue = {
 
 // ----- LMS
 export const lms = {
+  /** EnrolmentSummary[] { enrolmentId, courseId, offeringId, cohortId?, courseSlug, versionNo, fundingSource, fundingLabel? ("Sponsored by …", ADR 0021), status, progressPct, … } */
   enrolments: () => api.get('/lms/enrolments/me'),
   gradebook: (enrolmentId) => api.get(`/lms/enrolments/${enrolmentId}/gradebook`),
   lesson: (enrolmentId, lessonId) => api.get(`/lms/enrolments/${enrolmentId}/lessons/${lessonId}`),
@@ -65,19 +64,6 @@ export const lms = {
   createThread: (cohortId, body) => api.post(`/lms/cohorts/${cohortId}/threads`, body),
   reply: (threadId, body) => api.post(`/lms/threads/${threadId}/posts`, { body }),
   announcements: (cohortId) => api.get(`/notifications/cohorts/${cohortId}/announcements`),
-};
-
-// ----- Applications & opportunities
-export const applications = {
-  mine: () => api.get('/applications/me'),
-  opportunities: (params) => api.get('/sponsorship/opportunities', params, { auth: false }),
-  eligibility: (programmeId, facts) => api.post(`/sponsorship/opportunities/${programmeId}/eligibility`, facts),
-  submit: (programmeId, answers, submit) => api.post(`/applications/programmes/${programmeId}/applications`, { answers, submit }),
-  startAssessment: (applicationId) => api.post(`/applications/${applicationId}/assessment`, {}),
-  submitAssessment: (applicationId, answers) => api.put(`/applications/${applicationId}/assessment`, { answers }),
-  acceptOffer: (applicationId, withdrawFromApplicationId = null) => api.post(`/applications/${applicationId}/offer/accept`, { withdrawFromApplicationId }),
-  declineOffer: (applicationId) => api.post(`/applications/${applicationId}/offer/decline`, {}),
-  appeal: (applicationId, reason) => api.post(`/applications/${applicationId}/appeals`, { reason }),
 };
 
 // ----- Bookings

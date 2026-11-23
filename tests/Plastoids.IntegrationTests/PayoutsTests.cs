@@ -71,8 +71,20 @@ public class PayoutsTests(PlastoidsApiFactory factory)
         var holdId = (await hold.Content.ReadFromJsonAsync<JsonElement>(Json)).GetProperty("holdId").GetGuid();
         Key(staff);
         var blocked = await staff.PostAsync("/api/v1/admin/payouts/batches", null);
-        blocked.StatusCode.Should().Be(HttpStatusCode.Conflict, await blocked.Content.ReadAsStringAsync());
-        (await blocked.Content.ReadAsStringAsync()).Should().Contain("dispute_open");
+        var blockedBody = await blocked.Content.ReadAsStringAsync();
+        blockedBody.Should().Contain("dispute_open", "the held tutor is skipped whether or not other payees (from other tests) make a batch");
+        if (blocked.StatusCode == HttpStatusCode.Created)
+        {
+            // Other tests left payable payees with accounts: a batch was drafted without this tutor. Reject it so it does not hold their amounts.
+            var draftedWhileHeld = JsonSerializer.Deserialize<JsonElement>(blockedBody, Json);
+            draftedWhileHeld.GetProperty("payouts").EnumerateArray().Any(p => p.TryGetProperty("tutorUserId", out var tu) && tu.ValueKind == JsonValueKind.String && tu.GetGuid() == tutorUserId).Should().BeFalse();
+            Key(staff);
+            (await staff.PostAsJsonAsync($"/api/v1/admin/payouts/batches/{draftedWhileHeld.GetProperty("batchId").GetGuid()}/reject", new { reason = "Drafted while a hold was open; test clean-up" })).StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        else
+        {
+            blocked.StatusCode.Should().Be(HttpStatusCode.Conflict, blockedBody);
+        }
         Key(staff);
         (await staff.PostAsJsonAsync($"/api/v1/admin/payouts/holds/{holdId}/release", new { resolution = "Dispute dismissed" })).StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -123,6 +135,13 @@ public class PayoutsTests(PlastoidsApiFactory factory)
         var afterPayout = await tutor.GetFromJsonAsync<JsonElement>("/api/v1/payouts/me", Json);
         afterPayout.GetProperty("paid").GetProperty("amount").GetInt64().Should().Be(3_600_000);
         afterPayout.GetProperty("available").GetProperty("amount").GetInt64().Should().Be(0);
+        // The batch may carry other tests' payees: settle their transfers too so the batch can complete.
+        foreach (var other in batch.GetProperty("payouts").EnumerateArray().Where(p => p.GetProperty("providerReference").GetString() != reference))
+        {
+            var (otherPayload, otherSignature) = provider.BuildWebhook("transfer.success", other.GetProperty("providerReference").GetString()!, Money.Kobo(other.GetProperty("amount").GetProperty("amount").GetInt64()), DateTime.UtcNow, "NIP-TEST-" + other.GetProperty("payoutId").GetGuid().ToString("N")[..6]);
+            (await factory.CreateClient().SendAsync(PayoutWebhook(otherPayload, otherSignature))).IsSuccessStatusCode.Should().BeTrue();
+        }
+
         (await staff.GetFromJsonAsync<JsonElement>($"/api/v1/admin/payouts/batches/{batchId}", Json)).GetProperty("status").GetString().Should().Be("completed");
 
         // Zero reconciliation breaks after the full weekly run.

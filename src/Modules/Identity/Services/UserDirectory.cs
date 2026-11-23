@@ -33,6 +33,29 @@ internal sealed class UserDirectory(IdentityDbContext db, IUnitOfWork unitOfWork
 
         return new UserSummary(user.Id, user.DisplayName, user.Email, user.Status == Domain.UserStatus.Active, user.PhoneHash, age);
     }
+
+    public async Task<UserSummary?> FindByContactAsync(string? phone, string? email, CancellationToken cancellationToken)
+    {
+        if (unitOfWork.IsActive)
+        {
+            await unitOfWork.EnlistAsync(db, cancellationToken);
+        }
+
+        Guid? id = null;
+        if (!string.IsNullOrWhiteSpace(phone) && Domain.PhoneNumber.TryNormalise(phone, out var e164))
+        {
+            var hash = encryptor.BlindIndex(e164);
+            id = await db.Users.AsNoTracking().Where(u => u.PhoneHash == hash).Select(u => (Guid?)u.Id).FirstOrDefaultAsync(cancellationToken);
+        }
+
+        if (id is null && !string.IsNullOrWhiteSpace(email))
+        {
+            var normalised = email.Trim().ToLowerInvariant();
+            id = await db.Users.AsNoTracking().Where(u => u.Email == normalised).Select(u => (Guid?)u.Id).FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return id is null ? null : await GetAsync(id.Value, cancellationToken);
+    }
 }
 
 internal sealed class OrganisationDirectory(IdentityDbContext db, IUnitOfWork unitOfWork) : IOrganisationDirectory

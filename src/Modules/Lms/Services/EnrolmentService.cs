@@ -16,7 +16,11 @@ internal sealed class EnrolmentService(LmsDbContext db, ICourseOutlineReader cou
 {
     public static readonly TimeSpan DefaultAccess = TimeSpan.FromDays(365);
 
-    public async Task<Result<Enrolment>> EnrolAsync(Guid learnerId, Guid offeringId, string fundingSource, Guid? fundingSourceId, string sourceKey, Guid? cohortId, CancellationToken ct)
+    /// <summary>
+    /// fundingLabel is shown to the learner as who paid (ADR 0021: "Sponsored by …"); reservedSeat means the seat was reserved
+    /// beforehand by a seat block, so the cohort converts the reservation instead of admitting against capacity.
+    /// </summary>
+    public async Task<Result<Enrolment>> EnrolAsync(Guid learnerId, Guid offeringId, string fundingSource, Guid? fundingSourceId, string sourceKey, Guid? cohortId, string? fundingLabel, bool reservedSeat, CancellationToken ct)
     {
         var existing = await db.Enrolments.SingleOrDefaultAsync(e => e.SourceKey == sourceKey, ct);
         if (existing is not null)
@@ -53,22 +57,29 @@ internal sealed class EnrolmentService(LmsDbContext db, ICourseOutlineReader cou
         }
         else if (offering?.Format == "cohort")
         {
-            cohort = await db.Cohorts.Where(c => c.OfferingId == offeringId && c.Enrolled < c.Capacity && c.EndsAt > now).OrderBy(c => c.StartsAt).FirstOrDefaultAsync(ct);
+            cohort = await db.Cohorts.Where(c => c.OfferingId == offeringId && c.Enrolled + c.Reserved < c.Capacity && c.EndsAt > now).OrderBy(c => c.StartsAt).FirstOrDefaultAsync(ct);
         }
 
         if (cohort is not null)
         {
-            var admitted = cohort.Admit();
-            if (admitted.IsFailure)
+            if (reservedSeat && cohortId is not null)
             {
-                return Result.Failure<Enrolment>(admitted.Error);
+                cohort.AdmitReserved();
+            }
+            else
+            {
+                var admitted = cohort.Admit();
+                if (admitted.IsFailure)
+                {
+                    return Result.Failure<Enrolment>(admitted.Error);
+                }
             }
 
             expires = cohort.EndsAt.AddDays(30);
         }
 
         var required = course.Lessons.Count(l => l.Type != "live");
-        var enrolment = Enrolment.Create(tenant.TenantId, learnerId, course.CourseId, offeringId, cohort?.Id, course.VersionNo, fundingSource, fundingSourceId, sourceKey, required, now, expires);
+        var enrolment = Enrolment.Create(tenant.TenantId, learnerId, course.CourseId, offeringId, cohort?.Id, course.VersionNo, fundingSource, fundingSourceId, sourceKey, required, now, expires, fundingLabel);
         db.Enrolments.Add(enrolment);
         outbox.Enqueue(new EnrolmentCreated(enrolment.Id, enrolment.Id, learnerId, course.CourseId, offeringId, fundingSource, fundingSourceId, cohort?.Id));
         outbox.Enqueue(NotificationRequested.To(learnerId, "lms.enrolment.created", new Dictionary<string, string> { ["enrolmentId"] = enrolment.Id.ToString("D"), ["courseTitle"] = course.Title, ["courseSlug"] = course.Slug }));

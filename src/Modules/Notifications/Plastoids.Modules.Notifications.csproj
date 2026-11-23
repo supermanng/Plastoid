@@ -11,6 +11,7 @@
     <ProjectReference Include="../Certificates/Plastoids.Modules.Certificates.csproj" />
     <ProjectReference Include="../Payouts/Plastoids.Modules.Payouts.csproj" />
     <ProjectReference Include="../Applications/Contracts/Plastoids.Modules.Applications.Contracts.csproj" />
+    <ProjectReference Include="../Sponsorship/Contracts/Plastoids.Modules.Sponsorship.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />

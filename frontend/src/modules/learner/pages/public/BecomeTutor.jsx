@@ -21,7 +21,7 @@ export default function BecomeTutor() {
           <div>
             <h1 className="text-4xl leading-tight sm:text-5xl">Teach what you know. <span className="text-teal">Get paid every week.</span></h1>
             <p className="mt-4 max-w-lg text-white/80">
-              Verified tutors sell self-paced courses, run cohorts and take one-to-one bookings. Sponsors invite tutors with strong ratings onto funded programmes.
+              Verified tutors sell self-paced courses, run cohorts and take one-to-one bookings. Sponsors buy seats in cohorts run by tutors with strong ratings.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button to={cta} size="lg" variant="teal">Apply to teach</Button>

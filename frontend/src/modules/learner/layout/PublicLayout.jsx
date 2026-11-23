@@ -9,7 +9,6 @@ import { AppLink } from '../../../shared/lib/navigation';
 
 const NAV = [
   { to: '/courses', label: 'Courses' },
-  { to: '/opportunities', label: 'Sponsored seats' },
   { to: '/tutors', label: 'Find a tutor' },
   { to: '/become-a-tutor', label: 'Teach' },
   { to: '/for-sponsors', label: 'Sponsor' },
@@ -82,8 +81,8 @@ export default function PublicLayout() {
             <Logo />
             <p className="mt-3 text-sm text-muted">Sponsored and paid skills training for Nigeria. Learn, teach, sponsor.</p>
           </div>
-          <FooterCol title="Learn" links={[['/courses', 'Browse courses'], ['/opportunities', 'Sponsored opportunities'], ['/tutors', 'Find a tutor'], ['/verify', 'Verify a certificate']]} />
-          <FooterCol title="Partner" links={[['/become-a-tutor', 'Become a tutor'], ['/for-sponsors', 'Sponsor a programme'], ['/auth/staff', 'Staff sign-in']]} />
+          <FooterCol title="Learn" links={[['/courses', 'Browse courses'], ['/courses?format=cohort', 'Upcoming cohorts'], ['/tutors', 'Find a tutor'], ['/verify', 'Verify a certificate']]} />
+          <FooterCol title="Partner" links={[['/become-a-tutor', 'Become a tutor'], ['/for-sponsors', 'Sponsor seats'], ['/auth/staff', 'Staff sign-in']]} />
           <FooterCol title="Company" links={[['/about', 'About'], ['/privacy', 'Privacy (NDPA)'], ['/terms', 'Terms']]} />
         </div>
         <div className="border-t border-line py-4 text-center text-xs text-muted">© {new Date().getFullYear()} Plastoids. All amounts in Nigerian naira (₦).</div>

@@ -825,6 +825,330 @@ namespace Plastoids.Modules.Sponsorship.Persistence.Migrations
 
                     b.ToTable("sponsorship_seats", (string)null);
                 });
+
+            modelBuilder.Entity("Plastoids.Modules.Sponsorship.Domain.SeatAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AllocatedBy")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("allocated_by");
+
+                    b.Property<Guid>("BlockId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("block_id");
+
+                    b.Property<string>("ContactKind")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)")
+                        .HasColumnName("contact_kind");
+
+                    b.Property<string>("ContactMasked")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("varchar(254)")
+                        .HasColumnName("contact_masked");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("varchar(254)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTime?>("EnrolledAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("enrolled_at");
+
+                    b.Property<Guid?>("EnrolmentId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("enrolment_id");
+
+                    b.Property<DateTime>("InvitedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("invited_at");
+
+                    b.Property<Guid?>("LearnerId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("learner_id");
+
+                    b.Property<Guid?>("LedgerEntryId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("ledger_entry_id");
+
+                    b.Property<Guid?>("PayeeId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("payee_id");
+
+                    b.Property<string>("PayeeType")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("payee_type");
+
+                    b.Property<string>("PhoneHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("phone_hash");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<int>("SeatNo")
+                        .HasColumnType("int")
+                        .HasColumnName("seat_no");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.ComplexProperty<Dictionary<string, object>>("Commission", "Plastoids.Modules.Sponsorship.Domain.SeatAllocation.Commission#Money", b1 =>
+                        {
+                            b1.Property<long>("AmountKobo")
+                                .HasColumnType("bigint")
+                                .HasColumnName("commission_kobo");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("char(3)")
+                                .HasColumnName("commission_currency");
+                        });
+
+                    b.ComplexProperty<Dictionary<string, object>>("PayeeNet", "Plastoids.Modules.Sponsorship.Domain.SeatAllocation.PayeeNet#Money", b1 =>
+                        {
+                            b1.Property<long>("AmountKobo")
+                                .HasColumnType("bigint")
+                                .HasColumnName("payee_net_kobo");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("char(3)")
+                                .HasColumnName("payee_net_currency");
+                        });
+
+                    b.ComplexProperty<Dictionary<string, object>>("TutorShare", "Plastoids.Modules.Sponsorship.Domain.SeatAllocation.TutorShare#Money", b1 =>
+                        {
+                            b1.Property<long>("AmountKobo")
+                                .HasColumnType("bigint")
+                                .HasColumnName("tutor_share_kobo");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("char(3)")
+                                .HasColumnName("tutor_share_currency");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("pk_sponsorship_seat_allocations");
+
+                    b.HasIndex("Email")
+                        .HasDatabaseName("ix_sponsorship_seat_allocations_email");
+
+                    b.HasIndex("EnrolmentId")
+                        .HasDatabaseName("ix_sponsorship_seat_allocations_enrolment_id");
+
+                    b.HasIndex("PhoneHash")
+                        .HasDatabaseName("ix_sponsorship_seat_allocations_phone_hash");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_sponsorship_seat_allocations_tenant_id");
+
+                    b.HasIndex("BlockId", "LearnerId")
+                        .HasDatabaseName("ix_sponsorship_seat_allocations_block_id_learner_id");
+
+                    b.HasIndex("BlockId", "SeatNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sponsorship_seat_allocations_block_id_seat_no");
+
+                    b.ToTable("sponsorship_seat_allocations", (string)null);
+                });
+
+            modelBuilder.Entity("Plastoids.Modules.Sponsorship.Domain.SeatBlock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Allocated")
+                        .HasColumnType("int")
+                        .HasColumnName("allocated");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("closed_at");
+
+                    b.Property<Guid>("CohortId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("cohort_id");
+
+                    b.Property<string>("CohortName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("varchar(160)")
+                        .HasColumnName("cohort_name");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("course_id");
+
+                    b.Property<string>("CourseSlug")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("course_slug");
+
+                    b.Property<string>("CourseTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("course_title");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("EndsAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("ends_at");
+
+                    b.Property<Guid?>("LedgerEntryId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("ledger_entry_id");
+
+                    b.Property<Guid>("OfferingId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("offering_id");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("organisation_id");
+
+                    b.Property<DateTime>("PurchasedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("purchased_at");
+
+                    b.Property<Guid>("PurchasedBy")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("purchased_by");
+
+                    b.Property<int>("Released")
+                        .HasColumnType("int")
+                        .HasColumnName("released");
+
+                    b.Property<ulong>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("row_version");
+
+                    b.Property<int>("Seats")
+                        .HasColumnType("int")
+                        .HasColumnName("seats");
+
+                    b.Property<string>("SponsorName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("varchar(160)")
+                        .HasColumnName("sponsor_name");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("starts_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid?>("TutorUserId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("tutor_user_id");
+
+                    b.Property<long>("UnitRateKobo")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_rate_kobo");
+
+                    b.Property<long>("UnitsRedeemed")
+                        .HasColumnType("bigint")
+                        .HasColumnName("units_redeemed");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("binary(16)")
+                        .HasColumnName("wallet_id");
+
+                    b.ComplexProperty<Dictionary<string, object>>("FundsValue", "Plastoids.Modules.Sponsorship.Domain.SeatBlock.FundsValue#Money", b1 =>
+                        {
+                            b1.Property<long>("AmountKobo")
+                                .HasColumnType("bigint")
+                                .HasColumnName("funds_value_kobo");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("char(3)")
+                                .HasColumnName("funds_value_currency");
+                        });
+
+                    b.ComplexProperty<Dictionary<string, object>>("PricePerSeat", "Plastoids.Modules.Sponsorship.Domain.SeatBlock.PricePerSeat#Money", b1 =>
+                        {
+                            b1.Property<long>("AmountKobo")
+                                .HasColumnType("bigint")
+                                .HasColumnName("price_per_seat_kobo");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("char(3)")
+                                .HasColumnName("price_per_seat_currency");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("pk_sponsorship_seat_blocks");
+
+                    b.HasIndex("CohortId")
+                        .HasDatabaseName("ix_sponsorship_seat_blocks_cohort_id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_sponsorship_seat_blocks_tenant_id");
+
+                    b.HasIndex("OrganisationId", "Status")
+                        .HasDatabaseName("ix_sponsorship_seat_blocks_organisation_id_status");
+
+                    b.HasIndex("Status", "EndsAt")
+                        .HasDatabaseName("ix_sponsorship_seat_blocks_status_ends_at");
+
+                    b.ToTable("sponsorship_seat_blocks", (string)null);
+                });
 #pragma warning restore 612, 618
         }
     }

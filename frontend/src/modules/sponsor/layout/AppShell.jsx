@@ -1,4 +1,4 @@
-import { Banknote, BookOpen, Building2, Coins, FolderKanban, LayoutDashboard, Receipt, User } from 'lucide-react';
+import { Armchair, Banknote, BookOpen, Building2, Coins, LayoutDashboard, User } from 'lucide-react';
 import Shell from '../../../shared/components/layout/Shell';
 import { areaSwitcherFor } from '../../../shared/components/layout/areaSwitcher';
 import { useAuth } from '../../../shared/lib/auth';
@@ -13,10 +13,9 @@ export const NAVS = {
     label: 'Sponsor',
     items: [
       { to: '/', label: 'Overview', icon: LayoutDashboard, end: true, mobile: true },
-      { to: '/programmes', label: 'Programmes', icon: FolderKanban, mobile: true },
+      { to: '/seats', label: 'Seats', icon: Armchair, mobile: true },
       { to: '/courses', label: 'Courses', icon: BookOpen, mobile: true },
-      { to: '/organisation', label: 'Organisation', icon: Building2, mobile: true },
-      { to: '/invoices', label: 'Invoices', icon: Receipt },
+      { to: '/organisation', label: 'Organisation', icon: Building2 },
       { to: '/wallet', label: 'Wallet', icon: Coins },
       { to: '/payouts', label: 'Payouts', icon: Banknote },
       { href: `${MODULES.learner}learn/profile`, label: 'Profile', icon: User, mobile: true },

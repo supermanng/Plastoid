@@ -9,6 +9,7 @@ using Plastoids.Infrastructure.Messaging.Kafka;
 using Plastoids.Infrastructure.Modules;
 using Plastoids.Modules.Applications.Contracts;
 using Plastoids.Modules.Certificates.Contracts;
+using Plastoids.Modules.Identity.Contracts;
 using Plastoids.Modules.Lms.Contracts;
 using Plastoids.Modules.Payments.Contracts;
 using Plastoids.Modules.Sponsorship.Consumers;
@@ -26,6 +27,12 @@ using Plastoids.Modules.Sponsorship.Features.Campaigns.RequestQuote;
 using Plastoids.Modules.Sponsorship.Features.Campaigns.ReviewCampaign;
 using Plastoids.Modules.Sponsorship.Features.Opportunities.CheckEligibility;
 using Plastoids.Modules.Sponsorship.Features.Opportunities.ListOpportunities;
+using Plastoids.Modules.Sponsorship.Features.Seats.Admin;
+using Plastoids.Modules.Sponsorship.Features.Seats.AllocateSeat;
+using Plastoids.Modules.Sponsorship.Features.Seats.BuySeats;
+using Plastoids.Modules.Sponsorship.Features.Seats.GetSeatBlock;
+using Plastoids.Modules.Sponsorship.Features.Seats.ListSeatBlocks;
+using Plastoids.Modules.Sponsorship.Features.Seats.ReleaseSeats;
 using Plastoids.Modules.Sponsorship.Jobs;
 using Plastoids.Modules.Sponsorship.Persistence;
 using Plastoids.Modules.Sponsorship.Services;
@@ -46,6 +53,7 @@ public sealed class SponsorshipModule : IModule
         new(EnvelopeSerializer.GetAttribute(typeof(SeatFilled)).Topic),
         new(EnvelopeSerializer.GetAttribute(typeof(SeatReleased)).Topic),
         new(EnvelopeSerializer.GetAttribute(typeof(TutorEarningsAccrued)).Topic),
+        new(EnvelopeSerializer.GetAttribute(typeof(SeatAllocated)).Topic),
         new(EnvelopeSerializer.GetAttribute(typeof(NotificationRequested)).Topic),
     ];
 
@@ -56,12 +64,19 @@ public sealed class SponsorshipModule : IModule
         services.AddScoped<IProgrammeReader>(sp => sp.GetRequiredService<ProgrammeReader>());
         services.AddScoped<IProgrammeSeats>(sp => sp.GetRequiredService<ProgrammeReader>());
         services.AddScoped<IEligibilityChecker>(sp => sp.GetRequiredService<ProgrammeReader>());
+        services.AddScoped<SeatPricing>();
+        services.AddScoped<SeatAllocator>();
+        services.AddScoped<SeatReleaser>();
         services.AddScoped<MonthlyFeesJob>();
+        services.AddScoped<SeatBlockCloseJob>();
         services.AddQuartz(q =>
         {
             var fees = new JobKey(MonthlyFeesJob.JobName);
             q.AddJob<MonthlyFeesJob>(j => j.WithIdentity(fees).StoreDurably());
             q.AddTrigger(t => t.ForJob(fees).WithIdentity(fees.Name + "-trigger").WithCronSchedule("0 30 2 * * ?")); // 02:30 UTC nightly
+            var close = new JobKey(SeatBlockCloseJob.JobName);
+            q.AddJob<SeatBlockCloseJob>(j => j.WithIdentity(close).StoreDurably());
+            q.AddTrigger(t => t.ForJob(close).WithIdentity(close.Name + "-trigger").WithCronSchedule("0 45 2 * * ?")); // 02:45 UTC nightly (ADR 0021 close-out)
         });
     }
 
@@ -75,6 +90,14 @@ public sealed class SponsorshipModule : IModule
         GetProgrammeFunnelEndpoint.Map(sponsor);
         GetProgrammeBudgetEndpoint.Map(sponsor);
         DownloadImpactReportEndpoint.Map(sponsor);
+
+        var seats = endpoints.MapGroup("/sponsorship/organisations/{organisationId:guid}/seat-blocks").WithTags("Sponsorship");
+        BuySeatsEndpoint.Map(seats);
+        ListSeatBlocksEndpoint.Map(seats);
+        GetSeatBlockEndpoint.Map(seats);
+        AllocateSeatEndpoint.Map(seats);
+        ReleaseSeatsEndpoint.Map(seats);
+        SeatBlocksAdminEndpoint.Map(endpoints.MapGroup("/admin/sponsorship/seat-blocks").WithTags("Sponsorship (staff)"));
 
         var opportunities = endpoints.MapGroup("/sponsorship/opportunities").WithTags("Sponsorship");
         ListOpportunitiesEndpoint.Map(opportunities);
@@ -98,5 +121,7 @@ public sealed class SponsorshipModule : IModule
         ConsumerRegistry.For<CertificateIssued, CertificateIssuedConsumer, SponsorshipDbContext>(Name),
         ConsumerRegistry.For<AttendanceRecorded, AttendanceRecordedConsumer, SponsorshipDbContext>(Name),
         ConsumerRegistry.For<AttemptGraded, AttemptGradedConsumer, SponsorshipDbContext>(Name),
+        ConsumerRegistry.For<UserRegistered, UserRegisteredConsumer, SponsorshipDbContext>(Name),
+        ConsumerRegistry.For<EmailLinked, EmailLinkedConsumer, SponsorshipDbContext>(Name),
     ];
 }

@@ -4,7 +4,7 @@ const PAGES = {
   about: {
     title: 'About Plastoids',
     body: [
-      'Plastoids connects Nigerian learners with sponsored and paid skills training: cohort programmes funded by sponsors, self-paced courses and one-to-one tutoring from verified tutors.',
+      'Plastoids connects Nigerian learners with sponsored and paid skills training: dated cohorts whose seats employers and sponsors can buy for their people, self-paced courses and one-to-one tutoring from verified tutors.',
       'Sponsors fund seats and watch enrolment, attendance and completion live. Tutors are verified through identity, credential and subject reviews before they teach. Learners earn verifiable certificates.',
       'Every naira moves through a double-entry ledger with daily reconciliation, so sponsors, tutors and regulators can trust the numbers.',
     ],
@@ -20,7 +20,7 @@ const PAGES = {
   terms: {
     title: 'Terms of use',
     body: [
-      'Learners must be 18 or older. Sponsored seats are offered under the sponsor\'s published eligibility rules; accepting an offer means accepting the code of conduct for the programme.',
+      'Learners must be 18 or older. A sponsored seat is given by the sponsoring organisation to a named person; taking it up means accepting the code of conduct for the cohort.',
       'Tutors are paid weekly for earnings that have cleared the hold period. Refunds follow the cancellation windows shown at checkout: full refund more than 24 hours before a session, 50% within 24 hours, 100% when the tutor cancels.',
       'Messages between learners and tutors stay on the platform; posts that share contact details or payment requests are screened.',
     ],

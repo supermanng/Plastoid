@@ -9,6 +9,9 @@ public static class EarningSources
     public const string Course = "course";
     public const string Booking = "booking";
     public const string Programme = "programme";
+
+    /// <summary>A sponsored cohort seat (ADR 0021): held like a course sale.</summary>
+    public const string Seat = "seat";
 }
 
 public enum EarningStatus

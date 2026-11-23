@@ -24,6 +24,9 @@ public sealed class Cohort : Entity
     public DateTime EndsAt { get; private set; }
     public int Capacity { get; private set; }
     public int Enrolled { get; private set; }
+
+    /// <summary>Seats paid for by seat blocks (ADR 0021) but not yet allocated to a learner; they count against capacity.</summary>
+    public int Reserved { get; private set; }
     public Guid? ProgrammeId { get; private set; }
 
     public static Result<Cohort> Create(Guid tenantId, Guid courseId, Guid offeringId, Guid tutorUserId, string name, DateTime startsAt, DateTime endsAt, int capacity, Guid? programmeId)
@@ -41,7 +44,9 @@ public sealed class Cohort : Entity
         return new Cohort(NewId(), tenantId) { CourseId = courseId, OfferingId = offeringId, TutorUserId = tutorUserId, Name = name.Trim(), StartsAt = startsAt, EndsAt = endsAt, Capacity = capacity, ProgrammeId = programmeId };
     }
 
-    public bool HasSeats => Enrolled < Capacity;
+    public bool HasSeats => Enrolled + Reserved < Capacity;
+
+    public int SeatsLeft => Math.Max(0, Capacity - Enrolled - Reserved);
 
     public Result Admit()
     {
@@ -54,12 +59,56 @@ public sealed class Cohort : Entity
         return Result.Success();
     }
 
+    /// <summary>A reserved seat becomes an enrolled one (ADR 0021): the reservation already counted against capacity, so no capacity check.</summary>
+    public void AdmitReserved()
+    {
+        if (Reserved > 0)
+        {
+            Reserved--;
+        }
+
+        Enrolled++;
+    }
+
     public void Release()
     {
         if (Enrolled > 0)
         {
             Enrolled--;
         }
+    }
+
+    /// <summary>Holds <paramref name="seats"/> for a seat block (ADR 0021): fails cohort_ended once the cohort is over and cohort_full past capacity.</summary>
+    public Result Reserve(int seats, DateTime now)
+    {
+        if (seats <= 0)
+        {
+            return Error.Validation("seats_invalid", "Reserve at least one seat.");
+        }
+
+        if (EndsAt <= now)
+        {
+            return Error.Conflict("cohort_ended", "This cohort has ended.");
+        }
+
+        if (Enrolled + Reserved + seats > Capacity)
+        {
+            return Error.Conflict("cohort_full", $"Only {SeatsLeft} seat(s) left in this cohort.");
+        }
+
+        Reserved += seats;
+        return Result.Success();
+    }
+
+    /// <summary>Gives back reserved seats that were never allocated; never below zero.</summary>
+    public void ReleaseReserved(int seats)
+    {
+        if (seats <= 0)
+        {
+            return;
+        }
+
+        Reserved = Math.Max(0, Reserved - seats);
     }
 }
 

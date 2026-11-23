@@ -1,5 +1,5 @@
 import {
-  BarChart3, BookOpen, Briefcase, ClipboardList, Coins, Flag, FolderKanban, GraduationCap, History, KeyRound, Landmark, Mail, Percent,
+  Armchair, BarChart3, BookOpen, Briefcase, ClipboardList, Coins, Flag, GraduationCap, History, KeyRound, Landmark, Mail, Percent,
   ShieldCheck, Users, Wallet,
 } from 'lucide-react';
 import Shell from '../../../shared/components/layout/Shell';
@@ -16,7 +16,7 @@ export const NAVS = {
       { to: '/users', label: 'Users', icon: Users, mobile: true },
       { to: '/tutors', label: 'Tutors', icon: GraduationCap },
       { to: '/sponsors', label: 'Sponsors', icon: Briefcase },
-      { to: '/programmes', label: 'Programmes', icon: FolderKanban },
+      { to: '/seat-blocks', label: 'Seat blocks', icon: Armchair },
       { to: '/catalogue', label: 'Course moderation', icon: BookOpen },
       { to: '/finance', label: 'Finance', icon: Landmark, mobile: true },
       { to: '/payouts', label: 'Payouts', icon: Wallet },

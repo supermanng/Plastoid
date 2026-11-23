@@ -88,5 +88,6 @@ public sealed class PayoutsModule : IModule
         ConsumerRegistry.For<EarningReleased, EarningReleasedConsumer, PayoutsDbContext>(Name),
         ConsumerRegistry.For<RefundIssued, RefundIssuedConsumer, PayoutsDbContext>(Name),
         ConsumerRegistry.For<TutorEarningsAccrued, TutorEarningsAccruedConsumer, PayoutsDbContext>(Name),
+        ConsumerRegistry.For<SeatAllocated, SeatAllocatedConsumer, PayoutsDbContext>(Name),
     ];
 }

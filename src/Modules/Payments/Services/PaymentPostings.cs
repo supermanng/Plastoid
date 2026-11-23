@@ -71,7 +71,12 @@ internal static class PaymentPostings
     public static JournalEntryDraft Entry12UnitRedemption(PaymentIntent intent, DateTime occurredAt)
     {
         var unitsValue = new Money(intent.UnitsValueKobo, intent.Amount.Currency);
-        var postings = new List<PostingDraft> { PostingDraft.Dr(AccountCodes.UnitBalancesHeld, unitsValue, SubLedgerOwnerTypes.Wallet, intent.UnitsWalletId) };
+        var postings = new List<PostingDraft>();
+        if (!unitsValue.IsZero)
+        {
+            postings.Add(PostingDraft.Dr(AccountCodes.UnitBalancesHeld, unitsValue, SubLedgerOwnerTypes.Wallet, intent.UnitsWalletId)); // goodwill units carry no naira: the gap below expenses the price to 4060
+        }
+
         if (intent.Purpose == PaymentPurposes.CoPay)
         {
             postings.Add(PostingDraft.Cr(AccountCodes.ProgrammeFundsHeld, intent.Amount, SubLedgerOwnerTypes.Programme, intent.ReferenceId));
@@ -206,7 +211,12 @@ internal static class PaymentPostings
         var fundsPortionKobo = Math.Min(amountApplied.AmountKobo, fundsRemaining);
         var vatPortionKobo = amountApplied.AmountKobo - fundsPortionKobo;
 
-        var postings = new List<PostingDraft> { PostingDraft.Dr(AccountCodes.UnitBalancesHeld, unitsValue, SubLedgerOwnerTypes.Wallet, walletId) };
+        var postings = new List<PostingDraft>();
+        if (!unitsValue.IsZero)
+        {
+            postings.Add(PostingDraft.Dr(AccountCodes.UnitBalancesHeld, unitsValue, SubLedgerOwnerTypes.Wallet, walletId));
+        }
+
         if (fundsPortionKobo > 0)
         {
             postings.Add(PostingDraft.Cr(AccountCodes.ProgrammeFundsHeld, new Money(fundsPortionKobo, currency), SubLedgerOwnerTypes.Programme, invoice.ProgrammeId ?? invoice.OrganisationId));

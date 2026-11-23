@@ -13,8 +13,8 @@ function readStored() {
 
 /**
  * Selected sponsor organisation. Organisations come from GET /identity/me → organisations[{ id, name, type, role, verificationStatus }].
- * Roles: owner | finance | author | reviewer | viewer | member. Owner-only: publish, members, shortlist approval.
- * Finance (or owner): approve quote, invoices, payout account. Author (or owner): courses and tutor engagements (ADR 0019).
+ * Roles: owner | finance | author | reviewer | viewer | member. Owner-only: members.
+ * Finance (or owner): buy units, buy/release seats, give seats (ADR 0021), payout account. Author (or owner): courses and tutor engagements (ADR 0019).
  */
 export function useOrganisation() {
   const auth = useAuth();

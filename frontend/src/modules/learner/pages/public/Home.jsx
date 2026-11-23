@@ -4,21 +4,18 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Award, BookOpen, Briefcase, Building2, GraduationCap, Search, ShieldCheck, Sparkles, Star, Users } from 'lucide-react';
 import { Button, Card, Skeleton, StatusPill } from '../../../../shared/components/ui';
 import { api } from '../../../../shared/lib/api';
-import { formatDate, koboOf } from '../../../../shared/lib/format';
 import { UnitPrice } from '../../../../shared/lib/units.jsx';
+import { CohortGrid, useUpcomingCohorts } from './CohortCard';
 
 /*
- * Public homepage (blueprint §14 core screens): hero with search, sponsored opportunities strip, categories,
+ * Public homepage (blueprint §14 core screens): hero with search, upcoming cohorts strip (ADR 0021), categories,
  * top courses, how it works for learners · tutors · sponsors.
  */
 export default function Home() {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
 
-  const opportunities = useQuery({
-    queryKey: ['opportunities', 'home'],
-    queryFn: () => api.get('/sponsorship/opportunities', { limit: 6 }, { auth: false }),
-  });
+  const cohorts = useUpcomingCohorts({ limit: 6 });
   const courses = useQuery({
     queryKey: ['courses', 'home'],
     queryFn: () => api.get('/catalogue/courses', { limit: 6 }, { auth: false }),
@@ -36,13 +33,13 @@ export default function Home() {
         <div className="mx-auto grid max-w-[1280px] gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.2fr_1fr] lg:py-24">
           <div>
             <span className="inline-flex items-center gap-2 rounded-chip bg-white/10 px-3 py-1 text-xs font-semibold text-teal">
-              <Sparkles className="h-3.5 w-3.5" /> Sponsored seats open now
+              <Sparkles className="h-3.5 w-3.5" /> New cohorts starting soon
             </span>
             <h1 className="mt-4 text-4xl leading-tight sm:text-5xl">
               Skills training for Nigeria, <span className="text-teal">funded by people who need your talent.</span>
             </h1>
             <p className="mt-4 max-w-xl text-base text-white/80 sm:text-lg">
-              Apply for a sponsored seat, enrol in a paid course, or book a verified tutor. Learn on any phone, earn a certificate anyone can verify.
+              Enrol in a course, join a dated cohort, or book a verified tutor. If an employer or sponsor gives you a seat, it is waiting when you sign up. Learn on any phone, earn a certificate anyone can verify.
             </p>
             <form
               className="mt-8 flex max-w-xl flex-col gap-2 sm:flex-row"
@@ -60,16 +57,16 @@ export default function Home() {
               <Button type="submit" size="lg" variant="teal">Search</Button>
             </form>
             <div className="mt-6 flex flex-wrap gap-3 text-sm">
-              <Button to="/opportunities" variant="secondary" size="sm">Apply for a sponsored seat</Button>
+              <Button to="/courses" variant="secondary" size="sm">Browse courses</Button>
               <Button to="/become-a-tutor" variant="ghost" size="sm" className="text-white hover:bg-white/10">Become a tutor</Button>
-              <Button to="/for-sponsors" variant="ghost" size="sm" className="text-white hover:bg-white/10">Partner as a sponsor</Button>
+              <Button to="/for-sponsors" variant="ghost" size="sm" className="text-white hover:bg-white/10">Sponsor seats</Button>
             </div>
           </div>
           <ul className="grid gap-3 self-center sm:grid-cols-3 lg:grid-cols-1">
             {[
               [ShieldCheck, 'Verified tutors', 'Identity, credentials and a reviewed demo lesson before anyone teaches.'],
               [Award, 'Verifiable certificates', 'Every certificate has a public code and a tamper-evident hash.'],
-              [Users, 'Sponsors see impact', 'Funnel, attendance and completion, live, with the money on a ledger.'],
+              [Users, 'Sponsors give seats', 'Organisations buy seats in a cohort and hand them to the people they choose.'],
             ].map(([Icon, title, text]) => (
               <li key={title} className="flex gap-3 rounded-card bg-white/5 p-4">
                 <Icon className="h-6 w-6 shrink-0 text-teal" aria-hidden />
@@ -83,23 +80,17 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Sponsored opportunities */}
+      {/* Upcoming cohorts */}
       <Section
-        title="Sponsored opportunities"
-        description="Seats paid for by sponsors. Check your eligibility in seconds; apply in under ten minutes."
-        action={<Button to="/opportunities" variant="ghost" size="sm">See all <ArrowRight className="h-4 w-4" /></Button>}
+        title="Upcoming cohorts"
+        description="Dated runs with a start, an end and live classes. Enrol yourself, or ask your employer to sponsor a seat."
+        action={<Button to="/courses?format=cohort" variant="ghost" size="sm">Cohort courses <ArrowRight className="h-4 w-4" /></Button>}
       >
-        {opportunities.isPending ? <CardSkeletons /> : null}
-        {opportunities.isError ? <p className="text-sm text-muted">Opportunities are unavailable right now.</p> : null}
-        {opportunities.data ? (
-          itemsOf(opportunities.data).length ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {itemsOf(opportunities.data).map((o) => <OpportunityCard key={o.programmeId} o={o} />)}
-            </div>
-          ) : (
-            <Card className="text-sm text-muted">No sponsored programmes are open for applications right now. Browse paid courses below or <Link to="/for-sponsors">sponsor one</Link>.</Card>
-          )
-        ) : null}
+        <CohortGrid
+          query={cohorts}
+          limit={6}
+          empty={<Card className="text-sm text-muted">No cohorts are scheduled right now. Browse self-paced courses below, or <Link to="/for-sponsors">sponsor seats</Link> when the next one opens.</Card>}
+        />
       </Section>
 
       {/* Categories */}
@@ -136,9 +127,9 @@ export default function Home() {
         <div className="mx-auto max-w-[1280px] px-4 py-14 sm:px-6">
           <h2 className="text-2xl">How Plastoids works</h2>
           <div className="mt-8 grid gap-6 md:grid-cols-3">
-            <HowCard icon={GraduationCap} title="Learners" steps={['Sign up with your phone', 'Check eligibility and apply, or enrol', 'Learn live and on demand', 'Earn a verifiable certificate']} cta={['/opportunities', 'Find a sponsored seat']} />
+            <HowCard icon={GraduationCap} title="Learners" steps={['Sign up with your phone', 'Enrol, or take a seat a sponsor gave you', 'Learn live and on demand', 'Earn a verifiable certificate']} cta={['/courses', 'Find a course']} />
             <HowCard icon={BookOpen} title="Tutors" steps={['Apply and verify your identity', 'Pass a short subject review', 'Publish courses and set your rates', 'Get paid weekly to your bank']} cta={['/become-a-tutor', 'Apply to teach']} />
-            <HowCard icon={Briefcase} title="Sponsors" steps={['Verify your organisation', 'Build a campaign and approve the quote', 'Review the shortlist or delegate', 'Download the impact report']} cta={['/for-sponsors', 'Sponsor a programme']} />
+            <HowCard icon={Briefcase} title="Sponsors" steps={['Verify your organisation', 'Top up the wallet with units', 'Buy seats in a cohort', 'Give each seat to a learner by phone or email']} cta={['/for-sponsors', 'Sponsor seats']} />
           </div>
         </div>
       </section>
@@ -171,26 +162,6 @@ function CardSkeletons() {
 
 function itemsOf(data) {
   return Array.isArray(data) ? data : data?.items || [];
-}
-
-export function OpportunityCard({ o }) {
-  const free = !koboOf(o.coPayPerSeat);
-  return (
-    <Card as={Link} to={`/opportunities/${o.programmeId}`} className="flex flex-col gap-3 transition-shadow hover:shadow-md">
-      <div className="flex items-start justify-between gap-2">
-        <StatusPill tone="success" status="sponsored" label={free ? 'Fully sponsored' : `${o.sponsorSharePercent}% sponsored`} />
-        <span className="text-xs text-muted">{o.seatsOpen} of {o.seats} seats open</span>
-      </div>
-      <div>
-        <h3 className="text-base font-bold leading-snug text-navy">{o.name}</h3>
-        <p className="mt-0.5 text-sm text-muted">{o.courseTitle || 'Custom programme'} · by {o.sponsorName}</p>
-      </div>
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-        <span>{free ? 'No co-payment' : <>You pay <UnitPrice money={o.coPayPerSeat} size="sm" inline /></>}</span>
-        {o.applicationsCloseAt ? <span>Closes {formatDate(o.applicationsCloseAt)}</span> : null}
-      </div>
-    </Card>
-  );
 }
 
 export function CourseCard({ c }) {

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Plastoids.Infrastructure.Messaging;
 using Plastoids.Modules.Applications.Contracts;
 using Plastoids.Modules.Certificates.Contracts;
+using Plastoids.Modules.Identity.Contracts;
 using Plastoids.Modules.Ledger.Contracts;
 using Plastoids.Modules.Lms.Contracts;
 using Plastoids.Modules.Payments.Contracts;
@@ -106,13 +107,24 @@ internal sealed class OfferSentConsumer(SponsorshipDbContext db, IClock clock) :
         => Funnel.BumpAsync(db, envelope.TenantId, @event.ProgrammeId, "offered", clock.UtcNow, cancellationToken);
 }
 
-/// <summary>lms.enrolment-created.v1 (sponsored) → link the enrolment to its seat; the learner is now "active".</summary>
+/// <summary>lms.enrolment-created.v1 (sponsored) → link the enrolment to its seat allocation (ADR 0021, funding source = block) or to its programme seat; the learner is now "active".</summary>
 internal sealed class EnrolmentCreatedConsumer(SponsorshipDbContext db, IClock clock) : IIntegrationEventHandler<EnrolmentCreated>
 {
     public async Task HandleAsync(EnrolmentCreated @event, IntegrationEventEnvelope envelope, CancellationToken cancellationToken)
     {
         if (@event.FundingSource != FundingSources.Sponsored || @event.FundingSourceId is not { } programmeId)
         {
+            return;
+        }
+
+        var allocation = await db.SeatAllocations.SingleOrDefaultAsync(a => a.BlockId == programmeId && a.LearnerId == @event.LearnerId && a.Status == SeatAllocationStatus.Enrolled, cancellationToken);
+        if (allocation is not null)
+        {
+            if (allocation.EnrolmentId != @event.EnrolmentId)
+            {
+                allocation.LinkEnrolment(@event.EnrolmentId);
+            }
+
             return;
         }
 
@@ -177,4 +189,57 @@ internal sealed class AttemptGradedConsumer(SponsorshipDbContext db) : IIntegrat
         var seat = await db.Seats.SingleOrDefaultAsync(s => s.EnrolmentId == @event.EnrolmentId, cancellationToken);
         seat?.RecordScore(@event.Score);
     }
+}
+
+/// <summary>
+/// ADR 0021 §3: seats invited by phone or email convert when that contact gets an account. identity.user-registered.v1 carries the
+/// phone blind index and, for email registrations, the lower-case email; identity.email-linked.v1 carries an email an existing account added.
+/// </summary>
+internal static class SeatInvites
+{
+    public static async Task ConvertAsync(SponsorshipDbContext db, SeatAllocator allocator, Guid userId, string? phoneHash, string? email, DateTime now, CancellationToken ct)
+    {
+        var hasPhone = !string.IsNullOrEmpty(phoneHash);
+        var hasEmail = !string.IsNullOrEmpty(email);
+        if (!hasPhone && !hasEmail)
+        {
+            return;
+        }
+
+        var invited = await db.SeatAllocations
+            .Where(a => a.Status == SeatAllocationStatus.Invited && ((hasPhone && a.PhoneHash == phoneHash) || (hasEmail && a.Email == email)))
+            .OrderBy(a => a.InvitedAt)
+            .ToListAsync(ct);
+        foreach (var allocation in invited)
+        {
+            var block = await db.SeatBlocks.SingleOrDefaultAsync(b => b.Id == allocation.BlockId, ct);
+            if (block is null || block.Status != SeatBlockStatus.Active)
+            {
+                continue;
+            }
+
+            if (await db.SeatAllocations.AnyAsync(a => a.BlockId == block.Id && a.LearnerId == userId, ct))
+            {
+                continue; // one allocation per learner per block: a second invite for the same person stays invited
+            }
+
+            var enrolled = await allocator.EnrolAsync(block, allocation, userId, now, ct);
+            if (enrolled.IsFailure)
+            {
+                throw new InvalidOperationException($"Seat invite {allocation.Id} could not be enrolled: {enrolled.Error.Code} {enrolled.Error.Message}");
+            }
+        }
+    }
+}
+
+internal sealed class UserRegisteredConsumer(SponsorshipDbContext db, SeatAllocator allocator, IClock clock) : IIntegrationEventHandler<UserRegistered>
+{
+    public Task HandleAsync(UserRegistered @event, IntegrationEventEnvelope envelope, CancellationToken cancellationToken)
+        => SeatInvites.ConvertAsync(db, allocator, @event.UserId, @event.PhoneHash, @event.Email, clock.UtcNow, cancellationToken);
+}
+
+internal sealed class EmailLinkedConsumer(SponsorshipDbContext db, SeatAllocator allocator, IClock clock) : IIntegrationEventHandler<EmailLinked>
+{
+    public Task HandleAsync(EmailLinked @event, IntegrationEventEnvelope envelope, CancellationToken cancellationToken)
+        => SeatInvites.ConvertAsync(db, allocator, @event.UserId, null, @event.Email, clock.UtcNow, cancellationToken);
 }
