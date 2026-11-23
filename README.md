@@ -202,6 +202,46 @@ verified tutors to teach them; learners buy seats as usual and the money splits 
 - Web app: organisation Courses, course Tutors and Payouts pages in the sponsor area; a tutor Offers page; public course
   pages show the provider.
 
+## Demo simulation
+
+`make simulate` (`python3 scripts/simulate.py`, standard library only) drives the running Development API through every user
+journey with realistic Nigerian names and data, so a person can then sign in to the web app and click through everything:
+staff and super admin sign in; three tutors are onboarded and verified (KYC, credential, demo lesson, availability, pricing,
+payout account); a sponsor ("Access Foundation") and a provider ("Lagos Data School") are registered and verified, given
+members and funded with units; tutors publish courses (one with a cohort), the provider publishes a course taught by an
+engaged tutor and opens a cohort; learners sign up, buy by card or with units, book a 1:1 session, make progress, pass a
+quiz and earn a certificate, review a course and receive a refund; the sponsor buys seat blocks, gives seats, invites an
+unknown phone that converts on sign-up and releases a seat; finance imports the settlement, sweeps, releases earnings, runs
+a payout batch with maker–checker approval, settles it through the fake bank and reconciles; staff propose and approve a
+unit rate and a role grant, set a feature flag and read the audit log and the inbox.
+
+```bash
+make up && make run          # API in Development on :5080 (the simulation needs /api/v1/dev/*)
+make web                     # web app on :5173 (for the deep links in the report)
+make simulate                # about a minute; prints one line per step and the report
+python3 scripts/simulate.py --learners 8 --seed 7 --dry-run   # options; --dry-run only checks the API and prints the plan
+```
+
+- Development only: the script reads OTP codes with `GET /api/v1/dev/sms/last`, signs fake gateway and payout webhooks with
+  `POST /api/v1/dev/gateway/webhook` and `/dev/payouts/webhook`, registers bank-account names with `GET /dev/bank/register`
+  and runs jobs on demand with `POST /dev/jobs/{name}` (`earnings-release`, `reconciliation`, `seat-block-close`,
+  `monthly-fees`, `booking-release`, `booking-reminders`, `notifications-delivery`, `weekly-payout-run`; `?at=` runs a job as
+  of a later time). `src/Plastoids.Api/Dev/DevEndpoints.cs` is mapped only in Development and Testing.
+  `appsettings.Development.json` also raises the `/auth/*` rate limit to 120/min, sets the global limit to 3,000/min and sets
+  `Payouts:CourseSaleHoldDays` and `Payments:SweepHoldDays` to 0 so money reaches payouts within the run.
+- Re-runnable: every run uses a fresh phone range (`+23480<run id><nnn>`) and fresh CAC numbers and never depends on an
+  earlier run. Failed steps are printed with status and body, collected and listed in the report; the run continues.
+- The report (`scripts/.simulate/last-run.md`, plus a `.json` with ids) lists every account with its role, phone or email,
+  MFA secret and sign-in page (learners `/auth/sign-in`, tutors `/auth/sign-in` then `/tutor`, organisations
+  `/sponsor/auth/sign-in`, staff `/admin/auth/staff`), what was created with deep links (`/courses/{slug}`,
+  `/cohorts/{id}`, `/sponsor/seats/{blockId}`, `/admin/seat-blocks`, `/admin/payouts/{batchId}`, `/tutor/offers`,
+  `/learn/courses`, …), the money summary (settlement, sweep, payouts, reconciliation, ledger balances) and the failed steps.
+- Signing in afterwards: phone accounts request an OTP on the sign-in page and read the code from the API log
+  (`[fake-sms] …`) or `curl 'localhost:5080/api/v1/dev/sms/last?phone=0803…'`; where the report lists an MFA secret, type the
+  current code from a TOTP app or `python3 scripts/totp.py <secret>`. Staff: `staff@plastoids.local` / `Staff-Pass-2026!` /
+  `JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP`; super admin `admin@plastoids.local` / `Admin-Pass-2026!` /
+  `GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ` (both four-eyes counterparts).
+
 ## Web app (React)
 
 `frontend/` is a Vite + React 19 web app against this API, built as three interface modules from one package (ADR 0020):

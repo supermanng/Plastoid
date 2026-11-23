@@ -10,3 +10,4 @@ artifacts/*
 TestResults/
 appsettings.*.local.json
 .env
+scripts/.simulate/

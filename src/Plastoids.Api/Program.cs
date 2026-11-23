@@ -1,6 +1,7 @@
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Diagnostics;
 using Plastoids.Api;
+using Plastoids.Api.Dev;
 using Plastoids.Infrastructure;
 using Plastoids.Infrastructure.Http;
 using Plastoids.Infrastructure.Observability;
@@ -179,6 +180,8 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
     // Proves the problem-details path for unhandled exceptions (Sprint 9 security pass); never mapped in staging or production.
     v1.MapGet("/diagnostics/throw", DiagnosticsThrow)
         .WithName("DiagnosticsThrow").ExcludeFromDescription().AllowAnonymous();
+    // Development helpers for local tooling (scripts/simulate.py): captured OTPs, signed fake webhooks, jobs on demand.
+    v1.MapDevEndpoints();
 }
 foreach (var module in app.Services.GetServices<Plastoids.Infrastructure.Modules.IModule>())
 {

@@ -31,7 +31,8 @@ public sealed class FakeLiveVideoProvider(Secrets.ISecretProvider secrets) : ILi
 
     public Task<Result<LiveRoom>> CreateRoomAsync(Guid liveSessionId, DateTime startsAt, DateTime endsAt, CancellationToken cancellationToken)
     {
-        var roomId = "room_" + liveSessionId.ToString("N")[..16];
+        // The last 16 hex chars are the random half of a UUIDv7; the first half is the timestamp and collided when a cohort schedule created several sessions in one millisecond (unique room_id index).
+        var roomId = "room_" + liveSessionId.ToString("N")[^16..];
         return Task.FromResult(Result.Success(new LiveRoom(roomId, new Uri($"https://live.plastoids.local/{roomId}"))));
     }
 

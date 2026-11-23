@@ -1,4 +1,4 @@
-.PHONY: up down logs build test test-unit test-integration migrate seed run openapi format clean web web-install web-build web-lint
+.PHONY: up down logs build test test-unit test-integration migrate seed run openapi format clean web web-install web-build web-lint simulate
 
 API := src/Plastoids.Api/Plastoids.Api.csproj
 
@@ -56,6 +56,9 @@ web-build:     ## Production build of the frontend to frontend/dist
 
 web-lint:      ## Lint the frontend
 	npm run lint --prefix frontend
+
+simulate:      ## Demo simulation against the running Development API (:5080) and web app (:5173); report in scripts/.simulate/last-run.md
+	python3 scripts/simulate.py
 
 format:
 	dotnet format Plastoids.sln

@@ -32,5 +32,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Plastoids.Modules.Sponsorship.Tests" />
     <InternalsVisibleTo Include="Plastoids.IntegrationTests" />
+    <!-- SeatBlockCloseJob is internal; the host runs it on demand from /api/v1/dev/jobs in Development. -->
+    <InternalsVisibleTo Include="Plastoids.Api" />
   </ItemGroup>
 </Project>
